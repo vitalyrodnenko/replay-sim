@@ -1,0 +1,139 @@
+{
+  "rows": [
+    {
+      "config": "H",
+      "metric": "ttft_p50_s",
+      "kind": "latency",
+      "sim_delta": 0.0,
+      "real_delta": 0.0,
+      "gap": 0.0,
+      "abs_err": -0.07723577235772354,
+      "v1": true,
+      "v2": true
+    },
+    {
+      "config": "H",
+      "metric": "ttft_p95_s",
+      "kind": "latency",
+      "sim_delta": 0.0,
+      "real_delta": -0.15576323987538931,
+      "gap": 0.15576323987538931,
+      "abs_err": 0.20295202952029517,
+      "v1": false,
+      "v2": false
+    },
+    {
+      "config": "H",
+      "metric": "e2e_p50_s",
+      "kind": "latency",
+      "sim_delta": 0.0,
+      "real_delta": -0.018174308137133388,
+      "gap": 0.018174308137133388,
+      "abs_err": -0.054690786705931804,
+      "v1": true,
+      "v2": true
+    },
+    {
+      "config": "H",
+      "metric": "e2e_p95_s",
+      "kind": "latency",
+      "sim_delta": 0.0,
+      "real_delta": -0.04353597026811784,
+      "gap": 0.04353597026811784,
+      "abs_err": -0.09006383569247849,
+      "v1": true,
+      "v2": true
+    },
+    {
+      "config": "H",
+      "metric": "throughput_tok_s",
+      "kind": "cost",
+      "sim_delta": 0.0,
+      "real_delta": 0.007221954742417047,
+      "gap": 0.007221954742417047,
+      "abs_err": 0.0009560229445507508,
+      "v1": true,
+      "v2": true
+    },
+    {
+      "config": "H",
+      "metric": "prefix_cache_hit_rate",
+      "kind": "cost",
+      "sim_delta": 0.0,
+      "real_delta": 0.008187134502924076,
+      "gap": 0.008187134502924076,
+      "abs_err": 0.0,
+      "v1": true,
+      "v2": true
+    },
+    {
+      "config": "I",
+      "metric": "ttft_p50_s",
+      "kind": "latency",
+      "sim_delta": 0.07488986784140961,
+      "real_delta": 0.04065040650406515,
+      "gap": 0.03423946133734446,
+      "abs_err": -0.04687500000000004,
+      "v1": true,
+      "v2": true
+    },
+    {
+      "config": "I",
+      "metric": "ttft_p95_s",
+      "kind": "latency",
+      "sim_delta": 2.613496932515337,
+      "real_delta": 3.102803738317757,
+      "gap": 0.4893068058024199,
+      "abs_err": -0.10554290053151102,
+      "v1": false,
+      "v2": true
+    },
+    {
+      "config": "I",
+      "metric": "e2e_p50_s",
+      "kind": "latency",
+      "sim_delta": 0.04539385847797073,
+      "real_delta": 0.05142503097893436,
+      "gap": 0.006031172500963633,
+      "abs_err": -0.07719505008839124,
+      "v1": true,
+      "v2": true
+    },
+    {
+      "config": "I",
+      "metric": "e2e_p95_s",
+      "kind": "latency",
+      "sim_delta": 0.4044532560622234,
+      "real_delta": 0.34284576586142834,
+      "gap": 0.061607490200795034,
+      "abs_err": -0.0897499258673521,
+      "v1": true,
+      "v2": true
+    },
+    {
+      "config": "I",
+      "metric": "throughput_tok_s",
+      "kind": "cost",
+      "sim_delta": -0.03868194842406869,
+      "real_delta": -0.03273952816562342,
+      "gap": 0.005942420258445269,
+      "abs_err": 0.001991040318566479,
+      "v1": true,
+      "v2": true
+    },
+    {
+      "config": "I",
+      "metric": "prefix_cache_hit_rate",
+      "kind": "cost",
+      "sim_delta": -0.06264501160092795,
+      "real_delta": -0.06783625730994147,
+      "gap": 0.0051912457090135256,
+      "abs_err": 0.01380175658720202,
+      "v1": true,
+      "v2": true
+    }
+  ],
+  "n": 12,
+  "v1": 10,
+  "v2": 11
+}

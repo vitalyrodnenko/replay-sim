@@ -1,0 +1,12 @@
+   run   sim    configs |  all rows      v1      v2 |  held-out      v1      v2
+ run 1    v0        ABC |        11       1       1 |        11       1       1
+ run 2  v0.2      ABCDE |        23      12      18 |        12       9      10
+ run 3  v0.3    ABCDEFG |        35      25      32 |        12      10      11
+ run 4  v0.4    ABCDEFG |        35      23      32 |        --      --      --
+ run 5  v0.5  ABCDEFGHI |        47      36      44 |        12      10      11
+
+-- rows rescued by v2 (latency, |abs err| <= 15%) --
+  run 2 v0.2: B ttft_p95_s         gap  7252.0 pt, abs err  -13.4%
+  run 2 v0.2: B e2e_p50_s          gap   286.2 pt, abs err  -12.1%
+  run 2 v0.2: B e2e_p95_s          gap   370.6 pt, abs err  -12.4%
+  run 2 v0.2: C ttft_p95_s         gap  1367.7 pt, abs err  -13.2%

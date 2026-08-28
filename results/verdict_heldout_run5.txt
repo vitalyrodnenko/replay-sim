@@ -1,0 +1,22 @@
+baseline: config A
+
+ cfg                 metric     sim d    real d  gap pt  abs err    v1    v2
+   H             ttft_p50_s     +0.0%     +0.0%     0.0    -7.7%    OK    OK
+   H             ttft_p95_s     +0.0%    -15.6%    15.6   +20.3%  MISS  MISS
+   H              e2e_p50_s     +0.0%     -1.8%     1.8    -5.5%    OK    OK
+   H              e2e_p95_s     +0.0%     -4.4%     4.4    -9.0%    OK    OK
+   H       throughput_tok_s     +0.0%     +0.7%     0.7    +0.1%    OK    OK
+   H  prefix_cache_hit_rate     +0.0%     +0.8%     0.8    +0.0%    OK    OK
+   I             ttft_p50_s     +7.5%     +4.1%     3.4    -4.7%    OK    OK
+   I             ttft_p95_s   +261.3%   +310.3%    48.9   -10.6%  MISS    OK
+   I              e2e_p50_s     +4.5%     +5.1%     0.6    -7.7%    OK    OK
+   I              e2e_p95_s    +40.4%    +34.3%     6.2    -9.0%    OK    OK
+   I       throughput_tok_s     -3.9%     -3.3%     0.6    +0.2%    OK    OK
+   I  prefix_cache_hit_rate     -6.3%     -6.8%     0.5    +1.4%    OK    OK
+
+v1: 10 of 12 rows within bar
+v2: 11 of 12 rows within bar
+rows passing under v2 but not v1 (latency, abs err <= 15%):
+    I ttft_p95_s: gap 48.9 pt, abs err -10.6%
+
+VERDICT v1: FAIL   VERDICT v2: FAIL
