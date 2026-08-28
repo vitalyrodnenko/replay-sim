@@ -1,4 +1,4 @@
-"""Trace-driven discrete-event simulator of a vLLM-style engine. v0.6
+"""Trace-driven discrete-event simulator of a vLLM-style engine. v0.7
 
 v0.6: decode-generated full blocks are published to the prefix cache with
 unique content (vLLM caches all full blocks). They earn no hits on this
@@ -41,10 +41,11 @@ class Perf:
     def load(cls, path):
         """Load the four coefficients, ignoring provenance metadata.
 
-        Re-applied on top of the v0.6 drop-in, which reverted it. perf.json has
-        carried "a_source"/"bp_source"/"note"/"online_fit" since run 4 and the
-        plain loader raises TypeError on them. No physics touched -- the v0.6
-        step model and cache logic below are exactly as delivered.
+        Re-applied on top of the v0.7 drop-in, which reverted it again (as v0.6
+        did). perf.json has carried "a_source"/"bp_source"/"note"/"online_fit"
+        since run 4 and the plain loader raises TypeError on them. No physics
+        touched -- the v0.7 step model and eviction order below are exactly as
+        delivered.
         """
         with open(path) as f:
             d = json.load(f)
@@ -177,7 +178,11 @@ def simulate(trace, cfg: Cfg, perf: Perf):
         return free_blocks() >= n
 
     def release(r, keep_cache):
-        for h in r.pinned:
+        # v0.7: unpin in reverse chain order so leaves (and generated junk)
+        # enter the LRU before roots. Flat-LRU was evicting chain roots
+        # first, making whole prefixes unmatchable and charging a full
+        # prompt recompute where vLLM preserves the surviving prefix.
+        for h in reversed(r.pinned):
             cache.unpin(h)
         r.pinned = []
         r.alloc = 0

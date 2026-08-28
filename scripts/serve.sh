@@ -31,6 +31,9 @@ case "$cfg" in
   I)      GMU="${2:-0.78}"; MBT=8192; PC="--enable-prefix-caching" ;;
   # run 6 held-out config: an unseen pool point between F (0.78) and A (0.85).
   J)      GMU="${2:-0.82}"; MBT=2048; PC="--enable-prefix-caching" ;;
+  # run 7 held-out config: the pressure zone, where partial vs full recompute
+  # on eviction matters most. Unseen point between E (0.70) and F (0.78).
+  K)      GMU="${2:-0.75}"; MBT=2048; PC="--enable-prefix-caching" ;;
   *) echo "unknown config: $cfg" >&2; exit 1 ;;
 esac
 

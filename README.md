@@ -210,3 +210,39 @@ run-5 config-H mechanism.
 > workload.py for the third time; neither was copied. simulator.py was taken
 > from the archive as delivered, with only Perf.load's provenance-key tolerance
 > re-applied so it can read the v0.5 perf.json at all.
+
+# v0.7 changelog (2026-08-28, after validation run 6)
+
+Single change: release() unpins blocks in reverse chain order, so chain
+leaves and generated junk enter the eviction queue before chain roots.
+The flat LRU was evicting shared-prefix roots first, which made whole
+chains unmatchable and charged a full prompt recompute where vLLM
+preserves the surviving prefix (leaf-first prefix-tree eviction). This
+is the direct cause of run 6's uniform ttft_p95 over-prediction and
+the F sign flip.
+
+# Run 7 protocol
+
+- Criterion v2 carries the verdict; both counts for series continuity.
+- Held-out: K = gpu-mem-util 0.75, mns 128, mbt 2048 (pressure zone,
+  where partial vs full recompute matters most). One fresh real run.
+  A-J reals reused, labeled in-sample re-predictions.
+- Pre-registered predictions to freeze before simulating:
+  (i)   every positive ttft_p95 error decreases; F moves the most;
+        J's ttft_p95 passes v2 in-sample;
+  (ii)  e2e_p95 errors and the cost scorecard stay within noise;
+        hit rates in the pressure zone rise slightly toward real;
+  (iii) H does NOT move materially (stays near +20%): its mechanism
+        (real tail relief from surplus pool with no eviction pressure)
+        is not represented; this prediction makes H a test of that
+        claim rather than an inherited hope;
+  (iv)  K passes v2 on all six rows.
+
+> NOTE on this drop-in (run 7). Only simulator.py and the two sections above
+> were taken from the v0.7 archive. The archive again shipped a pre-run-4
+> calibrate.py (3,516 B vs the installed 23,319 B carrying the online modes)
+> and the pristine pre-fix workload.py -- the FOURTH consecutive drop-in to do
+> so -- and a README without VERDICT CRITERION v2 or any run 4-6 material.
+> None of that was installed; trace sha256 verified unchanged. simulator.py was
+> taken as delivered with only Perf.load's provenance-key tolerance re-applied,
+> which the archive reverted again and without which it cannot read perf.json.
