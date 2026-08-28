@@ -1,0 +1,21 @@
+== ttft_p95 absolute error: v0.5 -> v0.6 -> v0.7 ==
+ cfg      real     v0.5     v0.6     v0.7 |  v0.6->v0.7
+   A     0.642    +1.6%   +14.2%    +8.7% |       -5.5pt
+   B   148.261    -8.1%    -8.1%    -8.1% |       +0.0pt
+   C    27.857    +8.3%    +5.9%    +8.1% |       +2.2pt
+   D     0.583   +11.8%   +25.7%   +11.8% |      -13.9pt
+   E     3.190   +11.5%   +12.0%   +12.3% |       +0.3pt
+   F     1.360   -31.3%   +52.9%   +52.9% |       +0.0pt
+   G     0.829   -15.9%   +12.7%   +12.7% |       +0.0pt
+   H     0.542   +20.3%   +20.3%   +20.3% |       +0.0pt
+   I     2.634   -10.6%   +15.9%   +12.3% |       -3.7pt
+   J     0.705       --   +32.5%   +32.5% |       +0.0pt
+
+(i) positive v0.6 errors: ACDEFGHIJ
+    decreased under v0.7:  ADI
+    unchanged/increased:   CEFGHJ
+    largest move: D (+25.7% -> +11.8%, 13.9 pt)
+    F: +52.9% -> +52.9%  (predicted below +20%)
+    J: +32.5% -> +32.5%  (predicted <=15%, passes v2 abs limb: NO)
+
+(iii) H: +20.3% -> +20.3%  (predicted inside [+17.3, +23.3]: YES)

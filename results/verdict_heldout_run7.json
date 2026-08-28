@@ -1,0 +1,73 @@
+{
+  "rows": [
+    {
+      "config": "K",
+      "metric": "ttft_p50_s",
+      "kind": "latency",
+      "sim_delta": 0.06550218340611358,
+      "real_delta": 0.06910569105691056,
+      "gap": 0.0036035076507969777,
+      "abs_err": -0.07224334600760463,
+      "v1": true,
+      "v2": true
+    },
+    {
+      "config": "K",
+      "metric": "ttft_p95_s",
+      "kind": "latency",
+      "sim_delta": 2.6991404011461317,
+      "real_delta": 1.9361370716510904,
+      "gap": 0.7630033294950413,
+      "abs_err": 0.369761273209549,
+      "v1": false,
+      "v2": false
+    },
+    {
+      "config": "K",
+      "metric": "e2e_p50_s",
+      "kind": "latency",
+      "sim_delta": 0.06977257672775439,
+      "real_delta": 0.08157786038826931,
+      "gap": 0.01180528366051492,
+      "abs_err": -0.07485201451212532,
+      "v1": true,
+      "v2": true
+    },
+    {
+      "config": "K",
+      "metric": "e2e_p95_s",
+      "kind": "latency",
+      "sim_delta": 0.45091979396615156,
+      "real_delta": 0.3551898062118397,
+      "gap": 0.09572998775431185,
+      "abs_err": -0.03437806072477971,
+      "v1": true,
+      "v2": true
+    },
+    {
+      "config": "K",
+      "metric": "throughput_tok_s",
+      "kind": "cost",
+      "sim_delta": -0.03360537686029763,
+      "real_delta": -0.03273952816562342,
+      "gap": 0.0008658486946742094,
+      "abs_err": 0.001991040318566479,
+      "v1": true,
+      "v2": true
+    },
+    {
+      "config": "K",
+      "metric": "prefix_cache_hit_rate",
+      "kind": "cost",
+      "sim_delta": -0.07476635514018681,
+      "real_delta": -0.07368421052631569,
+      "gap": 0.0010821446138711277,
+      "abs_err": 0.0,
+      "v1": true,
+      "v2": true
+    }
+  ],
+  "n": 6,
+  "v1": 5,
+  "v2": 5
+}

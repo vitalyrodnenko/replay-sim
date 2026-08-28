@@ -1,20 +1,28 @@
-# replay-sim v0.6 validation report — run 6
+# replay-sim v0.7 validation report — run 7
 
 **Date:** 2026-08-28
 **Criterion:** v2 carries the verdict; both counts reported for series continuity.
-**Held-out config:** J (gpu-mem-util 0.82, unseen, 5,089 blocks). **Its six rows carry the verdict.**
+**Held-out config:** K (gpu-mem-util 0.75, unseen, 4,246 blocks — the pressure zone).
 **Verdict: v1 5 of 6 · v2 5 of 6 — FAIL.**
 
-**Pre-registered predictions: (i) CONFIRMED, (ii) FALSIFIED, (iii) FALSIFIED, (iv) CONFIRMED, (v) SPLIT.**
+**Predictions: (i) FALSIFIED · (ii) SPLIT · (iii) CONFIRMED · (iv) FALSIFIED.**
 
-**Bottom line.** v0.6 does exactly what it claims to the cache: hit rate now responds
-to pool size near saturation, and hit-rate error falls from 1.14% to 0.72% mean while
-`e2e_p95` error more than halves, 10.77% → **4.29%**. It also **overshoots the TTFT
-tail on every config**. Every `ttft_p95` error in the set is now positive; F went from
-−31.3% to **+52.9%**, and the held-out miss is J's `ttft_p95` at +32.5%. And the
-config the change was designed from — H — **did not move at all**: at 5,811 blocks the
-pool still is not pressured even with generated blocks consuming it, so the one row
-that motivated v0.6 is the one row v0.6 left untouched.
+**Bottom line.** v0.7's leaf-first eviction order was aimed at run 6's uniform
+`ttft_p95` over-prediction. It **did not hit it**. Three of nine positive errors moved;
+six did not budge at all, including **F — predicted to move the most — which moved
+exactly zero** (+52.9% under both v0.6 and v0.7). The held-out verdict fails on the
+same row as run 6, `ttft_p95`, at +37.0%.
+
+What the change did do is finish the cache. Prefix-cache hit-rate error is now
+**0.19% mean** and exact on six of eleven configs; the worst cost gap in the whole
+scorecard is **2.0 pt**. And prediction (iii) — the one that predicted *no* movement —
+is the only one that held, exactly.
+
+**The load-bearing result is negative and it is now well tested.** Across v0.5, v0.6
+and v0.7 the failing tail rows are F +52.9% (three versions, two values), J +32.5%
+(unchanged), H **+20.3% under all three**, and K +37.0%. Two consecutive cache changes
+in opposite directions — one adding eviction pressure, one reordering it — left them
+where they were. **The residual `ttft_p95` error is not a prefix-cache phenomenon.**
 
 | Run | Sim | Configs | rows | v1 | v2 | held-out | v1 | v2 |
 |---|---|---|---|---|---|---|---|---|
@@ -23,156 +31,142 @@ that motivated v0.6 is the one row v0.6 left untouched.
 | 3 | v0.3 | A–G | 35 | 25 | 32 | 12 (F,G) | 10 | 11 |
 | 4 | v0.4 | A–G | 35 | 23 | 32 | — | — | — |
 | 5 | v0.5 | A–I | 47 | 36 | 44 | 12 (H,I) | 10 | 11 |
-| **6** | **v0.6** | **A–J** | **53** | **44** | **50** | **6 (J)** | **5** | **5** |
+| 6 | v0.6 | A–J | 53 | 44 | 50 | 6 (J) | 5 | 5 |
+| **7** | **v0.7** | **A–K** | **59** | **48** | **56** | **6 (K)** | **5** | **5** |
 
 ---
 
 ## 1. Install provenance
 
-`perf.json` is **unchanged from run 5** — calibration was out of scope and `git diff`
-on it is empty. `simulator.py` is the v0.6 drop-in as delivered, with a single
-non-physics edit: `Perf.load`'s tolerance for provenance keys, re-applied because the
-archive reverted it and the plain loader raises
-`TypeError: Perf.__init__() got an unexpected keyword argument 'a_source'` on the v0.5
-`perf.json`. Verified before patching.
+`perf.json` is **byte-identical to runs 5 and 6** (`git diff` empty). Only
+`simulator.py` and the two named README sections were taken from the archive. The
+delivered change is one line — `for h in reversed(r.pinned)` at `simulator.py:185` —
+confirmed to be the only physics difference from v0.6.
 
-**The archive again shipped files that must not be installed.** `calibrate.py` was the
-pre-run-4 version (3,516 B against the current 23,319 B carrying the online modes);
-copying it would delete runs 4 and 5's calibration work. `workload.py` was the pristine
-pre-fix `tok0..tok511` version **for the third consecutive drop-in**. Neither was
-copied; the trace was verified unchanged after the swap (`sha256 4e70250f…`).
+One non-physics edit: `Perf.load`'s provenance-key tolerance, re-applied because the
+archive reverted it again. Without it the loader raises
+`TypeError: unexpected keyword argument 'a_source'` on `perf.json`; verified before
+patching.
 
-The archive README also **omits VERDICT CRITERION v2**, which its own Run 6 protocol
-depends on ("Criterion v2 … carries the verdict"). It is preserved verbatim in the
-installed README rather than dropped, and the substitution is noted there.
+**Fourth consecutive drop-in shipping files that must not be installed**: a pre-run-4
+`calibrate.py` (3,516 B against the installed 23,319 B carrying the online calibration
+modes) and the pristine pre-fix `workload.py`. Neither copied. Trace verified unchanged
+after the swap: `sha256 4e70250f…`. The archive README again omitted VERDICT CRITERION
+v2 and all run 4–6 material; only the two named sections were appended.
 
 ---
 
-## 2. The verdict — held-out config J
+## 2. The verdict — held-out config K
 
-J at `gpu-mem-util 0.82` probed to 81,424 tokens = **5,089 blocks**, unseen, between
-F (4,607) and A (5,450). One fresh real run, `--drop-first 10` on both sides.
+K at `gpu-mem-util 0.75` probed to 67,936 tokens = **4,246 blocks**, unseen, between
+E (3,644) and F (4,607). One fresh real run, `--drop-first 10` on both sides.
 
 | Row | sim Δ | real Δ | gap | abs err | v1 | v2 |
 |---|---|---|---|---|---|---|
-| ttft_p50_s | +0.9% | +0.4% | **0.5 pt** | −6.5% | ✅ | ✅ |
-| **ttft_p95_s** | **+27.4%** | **+9.8%** | **17.6 pt** | **+32.5%** | ❌ | ❌ |
-| e2e_p50_s | +2.1% | +0.1% | **1.9 pt** | −4.6% | ✅ | ✅ |
-| e2e_p95_s | +14.5% | +6.5% | **8.0 pt** | **+2.4%** | ✅ | ✅ |
-| throughput_tok_s | −1.2% | −1.8% | **0.6 pt** | −0.5% | ✅ | ✅ |
-| prefix_cache_hit_rate | −1.1% | −1.5% | **0.5 pt** | −0.5% | ✅ | ✅ |
+| ttft_p50_s | +6.6% | +6.9% | **0.4 pt** | −7.2% | ✅ | ✅ |
+| **ttft_p95_s** | **+269.9%** | **+193.6%** | 76.3 pt | **+37.0%** | ❌ | ❌ |
+| e2e_p50_s | +7.0% | +8.2% | **1.2 pt** | −7.5% | ✅ | ✅ |
+| e2e_p95_s | +45.1% | +35.5% | **9.6 pt** | **−3.4%** | ✅ | ✅ |
+| throughput_tok_s | −3.4% | −3.3% | **0.1 pt** | **+0.2%** | ✅ | ✅ |
+| prefix_cache_hit_rate | −7.5% | −7.4% | **0.1 pt** | **+0.0%** | ✅ | ✅ |
 
-**v1 5 of 6 · v2 5 of 6 — FAIL.** Five rows pass by wide margins; `e2e_p95` at +2.4%
-absolute is the best e2e tail prediction on any held-out config in the series. The
-single miss fails both v2 limbs: gap 17.6 pt *and* absolute error +32.5%.
+**v1 5 of 6 · v2 5 of 6 — FAIL.** The five passing rows are the best held-out set in
+the series: `e2e_p95` at −3.4% absolute, throughput at +0.2%, and hit rate **exact to
+three decimals** with a 0.1 pt gap. K's real hit rate fell to 0.792 from A's 0.855 and
+the simulator predicted 0.792.
 
-> **Recorded oddity.** The simulator predicts J (5,089 blocks, mbt 2048) **identically
-> to G** (5,106 blocks, mbt 8192) on every metric to three decimals — `ttft_p95` 0.934,
-> `e2e_p50` 4.624, hit 0.838. The real engine distinguishes them clearly: real J
-> `ttft_p95` 0.705 against real G's 0.829. Two configs differing by a 4× prefill budget
-> and 17 blocks are indistinguishable to the model and 18% apart in measurement.
+The one miss fails both v2 limbs: gap 76.3 pt **and** absolute error +37.0%. Same row
+as run 6's J miss, same sign, larger.
 
 ---
 
-## 3. Predictions (i)–(v)
+## 3. Predictions (i)–(iv)
 
-### (i) Sim hit rate responds to pool size near saturation — **CONFIRMED**
+### (i) Every positive `ttft_p95` error decreases; F moves most; J passes v2 — **FALSIFIED**
 
-| Config | blocks | real | v0.5 sim | err | v0.6 sim | err |
-|---|---|---|---|---|---|---|
-| C | 2,440 | 0.597 | 0.596 | −0.2% | 0.592 | −0.8% |
-| E | 3,644 | 0.726 | 0.738 | +1.7% | 0.723 | **−0.4%** |
-| I | 4,298 | 0.797 | 0.808 | +1.4% | 0.789 | −1.0% |
-| F | 4,607 | 0.812 | 0.838 | +3.2% | **0.808** | **−0.5%** |
-| J | 5,089 | 0.842 | — | — | 0.838 | **−0.5%** |
-| G | 5,106 | 0.844 | 0.857 | +1.5% | 0.838 | **−0.7%** |
-| **A** | **5,450** | **0.855** | 0.862 | +0.8% | **0.847** | −0.9% |
-| D | 5,490 | 0.859 | 0.862 | +0.3% | 0.847 | −1.4% |
-| **H** | **5,811** | **0.862** | 0.862 | +0.0% | **0.862** | **+0.0%** |
+| Config | real | v0.5 | v0.6 | **v0.7** | v0.6→v0.7 |
+|---|---|---|---|---|---|
+| A | 0.642 | +1.6% | +14.2% | **+8.7%** | **−5.5 pt** |
+| B | 148.261 | −8.1% | −8.1% | −8.1% | 0.0 pt |
+| C | 27.857 | +8.3% | +5.9% | +8.1% | +2.2 pt |
+| D | 0.583 | +11.8% | +25.7% | **+11.8%** | **−13.9 pt** |
+| E | 3.190 | +11.5% | +12.0% | +12.3% | +0.3 pt |
+| **F** | 1.360 | −31.3% | **+52.9%** | **+52.9%** | **0.0 pt** |
+| G | 0.829 | −15.9% | +12.7% | +12.7% | 0.0 pt |
+| **H** | 0.542 | +20.3% | +20.3% | **+20.3%** | **0.0 pt** |
+| I | 2.634 | −10.6% | +15.9% | **+12.3%** | **−3.7 pt** |
+| **J** | 0.705 | — | +32.5% | **+32.5%** | **0.0 pt** |
+| **K**\*\* | 1.885 | — | — | **+37.0%** | — |
 
-`sim_A` = 0.847 < `sim_H` = 0.862, breaking v0.5's flat 0.862, and `sim_A` lands inside
-the pre-registered [0.840, 0.860]. The values reproduce the changelog's stated
-directional check (0.808 / 0.847 / 0.862 at 4,607 / 5,450 / 5,811) **exactly**. Mean
-absolute hit-rate error **1.14% → 0.72%**.
+Nine positive errors under v0.6. **Three decreased** (A, D, I). Six did not: C got
+worse by 2.2 pt, E by 0.3, and F, G, H, J are **bit-identical**.
 
-As pre-registered, this was a verification rather than a blind prediction: the
-changelog states these numbers, so they were readable before the freeze.
+- **"F moves the most" — falsified outright.** F moved zero. D moved the most, 13.9 pt.
+- **"J passes v2" — falsified.** J is unchanged at +32.5% and still fails.
 
-### (ii) H `ttft_p95` over-prediction shrinks and H passes v2 — **FALSIFIED**
+The change works where it fires and does not fire where it is needed. G and J's hit
+rates *did* improve (0.838 → 0.843 and 0.842) while their `ttft_p95` stayed identical
+to three decimals — the reordering reaches the cache without reaching the tail.
 
-**H did not move at all.** `sim_H` `ttft_p95` is 0.652 s under both v0.5 and v0.6,
-still +20.3% against real 0.542 s, still failing both v2 limbs.
+### (ii) `e2e_p95` and cost within noise; pressure-zone hit rates rise — **SPLIT**
 
-The reason is visible in (i): H's hit rate is 0.862 before and after. At 5,811 blocks
-the pool is *still* not under eviction pressure even once generated blocks consume
-capacity — the change did not reach far enough up the pool axis to touch the config it
-was derived from. v0.6 moved every pool below H and left H exactly where it was.
+**Cost clause — holds, emphatically.** Worst cost gap **2.0 pt** against a ≤3 pt
+threshold, the best in the series (v0.6: 2.8 pt). Full table in §5.
 
-### (iii) J passes v2 on all six rows — **FALSIFIED**
+**Hit-rate clause — 3 of 4.** E −0.4% → −0.3%, F −0.5% → −0.4%, I −1.0% → **+0.0%**.
+C stayed flat at −0.8%; at 2,440 blocks its cache thrashes regardless of ordering.
 
-5 of 6. The miss is `ttft_p95` at +32.5% absolute, 17.6 pt gap — §2.
+**`e2e_p95` clause — breached.** Mean absolute error **4.11% → 6.54%**, over the ≤6%
+I pre-registered. v0.6's single best result is partly given back: G +4.0% → −6.1%,
+J +2.4% → −7.5%, D −0.6% → −9.2%, A −4.7% → −9.8%. Reordering eviction returns
+capacity to running sequences, which shortens simulated end-to-end times below the
+measured ones.
 
-### (iv) Cost scorecard unchanged, every cost gap ≤ 3 pt — **CONFIRMED**
+### (iii) H does **not** move materially — **CONFIRMED, exactly**
 
-Worst cost gap **2.8 pt** (B throughput), against v0.5's 2.5 pt. Every hit-rate gap
-≤ 1.0 pt. Full table in §5.
+H's `ttft_p95` absolute error is **+20.3% under v0.5, v0.6 and v0.7** — bit-identical
+across three simulator versions and two cache changes in opposite directions. Inside
+the pre-registered [+17.3%, +23.3%], and the H row still fails v2.
 
-**The recorded risk did not fire.** I predicted C's hit rate was the row most likely to
-break (iv), since the change can only reduce simulated hit rates and C's was already
-near-exact. C moved −0.2% → −0.8% — real but small, and its hit-rate *gap* actually
-improved to 0.1 pt. C's pool is small enough that its cache was already thrashing;
-adding generated blocks changed little.
+**This is the run's most useful result.** Run 6 §7 argued H's miss is a different
+mechanism — real tail relief from surplus pool with *no* eviction pressure — that no
+eviction change can reach. (iii) turned that from an inherited excuse into a
+prediction, and the prediction held under a direct test. At 5,811 blocks there is
+nothing to evict, so there is nothing for an eviction-order change to reorder. **H now
+needs its own hypothesis; it can no longer inherit each run's cache change.**
 
-### (v) F and G `ttft_p95` absolute errors shrink — **SPLIT: G confirmed, F falsified**
+### (iv) K passes v2 on all six rows — **FALSIFIED**
 
-| | real | v0.5 sim | err | v0.6 sim | err | \|err\| change |
-|---|---|---|---|---|---|---|
-| A | 0.642 | 0.652 | +1.6% | 0.733 | +14.2% | +12.6 pt |
-| B | 148.261 | 136.197 | −8.1% | 136.197 | −8.1% | 0.0 pt |
-| C | 27.857 | 30.156 | +8.3% | 29.513 | +5.9% | **−2.3 pt** |
-| D | 0.583 | 0.652 | +11.8% | 0.733 | +25.7% | +13.9 pt |
-| E | 3.190 | 3.556 | +11.5% | 3.572 | +12.0% | +0.5 pt |
-| **F** | 1.360 | 0.934 | **−31.3%** | 2.080 | **+52.9%** | **+21.6 pt** |
-| **G** | 0.829 | 0.697 | **−15.9%** | 0.934 | **+12.7%** | **−3.3 pt** |
-| **H** | 0.542 | 0.652 | +20.3% | 0.652 | +20.3% | 0.0 pt |
-| I | 2.634 | 2.356 | −10.6% | 3.054 | +15.9% | +5.4 pt |
-| **J**\*\* | 0.705 | — | — | 0.934 | **+32.5%** | — |
+5 of 6, missing `ttft_p95` at +37.0% — §2. Run 6 predicted the same for J and got the
+same 5 of 6, missing the same row. Two held-out configs, two runs, one row.
 
-**G confirmed**: −15.9% → +12.7%, magnitude down 3.3 points, and it now passes the v2
-absolute limb. **F falsified, badly**: −31.3% → **+52.9%**, the largest latency error
-in the series, with the sign flipped.
-
-**The pattern across the whole column is the finding.** Every `ttft_p95` error except
-B's is now **positive**. v0.6 converted a set of under-predictions into a set of
-over-predictions and moved the aggregate the wrong way: mean `ttft_p95` absolute error
-**13.26% → 18.65%**. Publishing generated blocks adds eviction pressure, eviction
-causes recompute, and recompute lands in the first-token tail — the mechanism is real,
-and its magnitude is calibrated too high.
+> **Recorded: (i) and (iii) were in direct tension and I said so before running.** (i)
+> required every positive error including H's to decrease; (iii) required H not to
+> move. I pre-registered that both would be scored as written and that my expectation
+> was H staying put. H stayed put: (iii) confirmed, (i) falsified on that row and on
+> five others besides.
 
 ---
 
-## 4. Aggregate movement, A–I
+## 4. Aggregate movement, A–J
 
-| Metric | v0.5 | v0.6 | change |
+| Metric | v0.6 | v0.7 | change |
 |---|---|---|---|
-| ttft_p50_s | 7.41% | 7.41% | +0.01 pt |
-| **ttft_p95_s** | 13.26% | **18.65%** | **+5.38 pt** |
-| e2e_p50_s | 7.65% | **6.71%** | −0.94 pt |
-| **e2e_p95_s** | 10.77% | **4.29%** | **−6.48 pt** |
-| throughput_tok_s | 1.20% | **1.10%** | −0.11 pt |
-| prefix_cache_hit_rate | 1.14% | **0.72%** | −0.42 pt |
-| **all metrics** | 7.01% | **6.59%** | **−0.42 pt** |
+| ttft_p50_s | 7.32% | **5.35%** | −1.97 pt |
+| ttft_p95_s | 20.03% | **17.98%** | −2.05 pt |
+| e2e_p50_s | 6.51% | **6.22%** | −0.28 pt |
+| e2e_p95_s | 4.11% | 6.54% | **+2.44 pt** |
+| throughput_tok_s | 1.04% | **0.81%** | −0.23 pt |
+| prefix_cache_hit_rate | 0.70% | **0.19%** | −0.51 pt |
+| **all metrics** | 6.72% | **6.28%** | **−0.43 pt** |
 
-v0.6 is a **net improvement that trades one metric for another**: `e2e_p95` error more
-than halves and `ttft_p95` error grows by 40%. Both moves come from the same mechanism.
-The eviction-driven recompute cost lands correctly in end-to-end latency and too
-heavily in the first-token tail — consistent with the simulator charging a full prompt
-recompute where vLLM recovers part of the prefix.
+A small net improvement that again trades one metric for another, mirroring run 6:
+v0.6 halved `e2e_p95` error and inflated `ttft_p95`; v0.7 recovers some `ttft_p95` and
+gives back `e2e_p95`. Neither reaches the rows that actually fail.
 
-### In-sample A–I
-
-**v1 39 of 47 · v2 45 of 47.** The two v2 misses are **C `ttft_p50`** (+22.7%, new this
-run) and **F `ttft_p95`** (+52.9%). G's `ttft_p95`, a v2 miss in run 5, now passes.
+**In-sample A–J: v1 43 of 53 · v2 51 of 53.** The two v2 misses are **F `ttft_p95`**
+(+52.9%) and **J `ttft_p95`** (+32.5%) — unchanged from run 6. C's `ttft_p50`, a v2
+miss in run 6 at +22.7%, now passes.
 
 ---
 
@@ -182,78 +176,74 @@ run) and **F `ttft_p95`** (+52.9%). G's `ttft_p95`, a v2 miss in run 5, now pass
 
 | Config | tput sim/real | err | gap | gpu_s/1k sim / real\* | err | hit sim/real | err | gap |
 |---|---|---|---|---|---|---|---|---|
-| A | 205.4 / 207.7 | −1.1% | — | 4.667 / 4.514 | +3.4% | 0.847 / 0.855 | −0.9% | — |
-| B | 109.1 / 104.6 | +4.3% | **2.8** | 9.148 / 9.411 | −2.8% | 0.000 / n/a | — | — |
-| C | 168.9 / 171.2 | −1.3% | **0.2** | 5.796 / 5.542 | +4.6% | 0.592 / 0.597 | −0.8% | **0.1** |
-| D | 205.4 / 208.7 | −1.6% | **0.5** | 4.667 / 4.492 | +3.9% | 0.847 / 0.859 | −1.4% | **0.5** |
-| E | 200.6 / 199.6 | +0.5% | **1.6** | 4.861 / 4.715 | +3.1% | 0.723 / 0.726 | −0.4% | **0.4** |
-| F | 201.3 / 201.3 | **+0.0%** | **1.1** | 4.771 / 4.667 | +2.2% | 0.808 / 0.812 | −0.5% | **0.4** |
-| G | 202.9 / 204.4 | −0.7% | **0.4** | 4.728 / 4.596 | +2.9% | 0.838 / 0.844 | −0.7% | **0.2** |
-| H | 209.4 / 209.2 | +0.1% | **1.2** | 4.575 / 4.481 | +2.1% | 0.862 / 0.862 | +0.0% | **1.0** |
-| I | 201.3 / 200.9 | +0.2% | **1.3** | 4.796 / 4.676 | +2.6% | 0.789 / 0.797 | −1.0% | **0.1** |
-| **J**\*\* | 202.9 / 203.9 | **−0.5%** | **0.6** | 4.728 / 4.607 | +2.6% | 0.838 / 0.842 | **−0.5%** | **0.5** |
+| A | 208.3 / 207.7 | +0.3% | — | 4.601 / 4.514 | +1.9% | 0.856 / 0.855 | **+0.1%** | — |
+| B | 109.1 / 104.6 | +4.3% | **2.0** | 9.148 / 9.411 | −2.8% | 0.000 / n/a | — | — |
+| C | 167.6 / 171.2 | −2.1% | **2.0** | 5.844 / 5.542 | +5.5% | 0.592 / 0.597 | −0.8% | **0.7** |
+| D | 209.0 / 208.7 | +0.1% | **0.1** | 4.584 / 4.492 | +2.0% | 0.859 / 0.859 | **+0.0%** | **0.1** |
+| E | 200.6 / 199.6 | +0.5% | **0.2** | 4.861 / 4.715 | +3.1% | 0.724 / 0.726 | −0.3% | **0.3** |
+| F | 201.7 / 201.3 | +0.2% | **0.1** | 4.762 / 4.667 | +2.0% | 0.809 / 0.812 | −0.4% | **0.5** |
+| G | 204.5 / 204.4 | **+0.0%** | **0.2** | 4.690 / 4.596 | +2.0% | 0.843 / 0.844 | −0.1% | **0.2** |
+| H | 209.4 / 209.2 | +0.1% | **0.2** | 4.575 / 4.481 | +2.1% | 0.862 / 0.862 | **+0.0%** | **0.1** |
+| I | 201.3 / 200.9 | +0.2% | **0.1** | 4.780 / 4.676 | +2.2% | 0.797 / 0.797 | **+0.0%** | **0.1** |
+| J | 204.3 / 203.9 | +0.2% | **0.1** | 4.694 / 4.607 | +1.9% | 0.842 / 0.842 | **+0.0%** | **0.1** |
+| **K**\*\* | 201.3 / 200.9 | **+0.2%** | **0.1** | 4.788 / 4.676 | +2.4% | 0.792 / 0.792 | **+0.0%** | **0.1** |
 
 \* real `gpu_s/1k` is derived from `nvidia-smi`, not measured.
 
-**Cost prediction has now survived six held-out configs across five axes** — pool size
-(F, H, J), scheduler (D), prefill granularity (G), and the pool × granularity crossing
-(I) — **without a single miss.** J's held-out cost errors are −0.5% throughput and
-−0.5% hit rate. Hit-rate gaps are the tightest they have ever been (≤ 1.0 pt), which is
-v0.6's clearest win.
+**The cost model is finished.** Hit rate is exact to three decimals on six of eleven
+configs and within 0.8% on the rest; every hit-rate gap ≤ 0.7 pt; throughput within
+0.5% on nine of eleven. **Seven held-out configs across five axes — pool size (F, H, J,
+K), scheduler (D), prefill granularity (G), and the pool × granularity crossing (I) —
+with no cost miss in the series.**
 
 ---
 
 ## 6. Run integrity
 
-- **v0.6 installed and `PREDICTIONS_run6.md` committed before any simulation**
-  (`a050e01`), with numeric expectations for (i)–(v), the note that (i) is a
-  verification of a changelog-stated check rather than a blind prediction, and the
-  recorded risk about C.
-- **All ten predictions committed before any real run or comparison** (`2dfd58a`). J
-  had no measurement in existence at that commit.
-- **`perf.json` byte-identical to run 5**, verified by empty `git diff`.
-- **A–I config arguments verified identical** to runs 3/4/5, field by field.
-- **J's pool probed from its own startup log before predicting** (81,424 tokens) and
-  matched at run time.
-- **A–I are in-sample re-predictions** against reals from runs 3 and 5, stated with the
-  same prominence run 4 used: they carry no generalisation claim. J alone is held out.
+- **v0.7 installed and `PREDICTIONS_run7.md` committed before any simulation**
+  (`029ed86`), with numeric expectations for (i)–(iv) and the recorded tension between
+  (i) and (iii) on config H, including which way I expected it to resolve.
+- **All eleven predictions committed before any real run or comparison** (`2714147`).
+  K had no measurement in existence at that commit.
+- **`perf.json` byte-identical to runs 5 and 6**, verified by empty `git diff`.
+- **A–G config arguments verified identical** to runs 3–6, field by field.
+- **K's pool probed from its own startup log before predicting** (67,936 tokens).
+- **A–J are in-sample re-predictions** against reals from runs 3, 5 and 6.
 - **The archive's stale `calibrate.py` and pre-fix `workload.py` were not installed**;
-  trace provenance verified.
+  trace provenance verified by sha256.
 
 ---
 
 ## 7. Where this leaves the hypothesis
 
-**What v0.6 got right.** The cache mechanism. Hit rate now tracks pool size across the
-whole range instead of saturating, hit-rate error is the lowest in the series, `e2e_p95`
-error more than halved, and cost prediction survived a sixth held-out config untouched.
-The physics of "generated blocks consume cache capacity" is correct and was worth
-adding.
+**What is finished.** Cost. Seven held-out configs, five axes, no miss, and hit-rate
+prediction now exact on more than half the set. Whatever else is open, "what will this
+config change do to my serving cost and cache efficiency" is answered.
 
-**What it got wrong.** The magnitude, in exactly one place. Every `ttft_p95` in the set
-is now over-predicted, mean error up 5.4 points, and the held-out verdict fails on that
-single row. The simulator charges a full prompt recompute on eviction; vLLM recovers
-whatever prefix survives, so the true tail penalty is smaller than the modelled one.
+**What two runs have now ruled out.** The tail is not a prefix-cache problem. v0.6
+added eviction pressure and pushed every `ttft_p95` up; v0.7 reordered eviction and
+pulled three back down while leaving F, G, H and J bit-identical. The rows that fail
+are insensitive to both. F has been at +52.9% across two versions, J at +32.5%, and
+H at **+20.3% across three**.
 
-**What it did not touch.** Config H — the row v0.6 was derived from. At 5,811 blocks the
-pool is not pressured even with generated blocks in it, so H's prediction is bit-identical
-to v0.5's and still +20.3%. The change explains H's *mechanism* while failing to move
-H's *number*.
+**What (iii) established.** H's miss is a distinct mechanism, confirmed by a prediction
+that it would not move. It cannot be addressed by cache work at all — at 5,811 blocks
+there is nothing to evict.
 
 Ranked next steps:
 
-1. **Make eviction recompute partial, not total.** One change, and it is the direct
-   cause of the `ttft_p95` overshoot: a preempted or evicted request should re-match
-   whatever prefix blocks survived rather than recomputing the whole prompt. This should
-   pull every positive `ttft_p95` error down while leaving `e2e_p95` and the cost
-   scorecard — v0.6's wins — where they are.
-2. **Give the model a reason to distinguish J from G.** §2: the simulator returns
-   identical predictions for a 4× difference in prefill budget at nearly the same pool,
-   and the engine reports an 18% difference. Whatever separates them is not represented
-   at all.
-3. **Re-test H with item 1 applied.** H is the only held-out row in the series that has
-   never moved. If partial recompute does not move it either, H needs its own hypothesis
-   rather than inheriting one.
-4. **TP communication term** — B's throughput error is +4.3% and its cost gap 2.8 pt,
-   the largest remaining in the scorecard, and still the only config with no modelled
-   communication cost.
+1. **Stop changing the cache to fix the tail.** Two opposed cache changes have now
+   failed to move the failing rows. The next change should be aimed at `ttft_p95`
+   directly, with a measurement first: instrument which requests occupy the p95 in
+   both sim and real for F, J and K, and compare their *individual* waits rather than
+   the percentile. The percentile has been the unit of analysis for four runs and it
+   has hidden which requests are wrong.
+2. **Give H its own hypothesis.** (iii) confirmed it is not a cache effect. Real H is
+   *faster* than real A at the tail with 6.6% more pool and no eviction pressure in
+   either — an effect the model has no term for. Candidates: allocator fragmentation,
+   or CUDA-graph capture differences at different pool sizes.
+3. **Distinguish J from G.** Still unaddressed from run 6: the simulator returns
+   identical predictions for a 4× prefill-budget difference at nearly the same pool,
+   and the engine reports `ttft_p95` 0.705 vs 0.829.
+4. **TP communication term** — B's throughput error is +4.3% and its cost gap 2.0 pt,
+   now the largest remaining item in an otherwise finished scorecard.

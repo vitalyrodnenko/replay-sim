@@ -1,0 +1,19 @@
+== (ii) e2e_p95 absolute error, v0.6 -> v0.7 ==
+  A:   -4.7% ->   -9.8%
+  B:   -7.5% ->   -7.5%
+  C:   +5.7% ->   +6.4%
+  D:   -0.6% ->   -9.2%
+  E:   -3.9% ->   -6.8%
+  F:   -0.2% ->   -0.2%
+  G:   +4.0% ->   -6.1%
+  H:   -9.0% ->   -9.0%
+  I:   -3.0% ->   -3.0%
+  J:   +2.4% ->   -7.5%
+mean |e2e_p95 err|: 4.11% -> 6.54%  (threshold <=6%: BREACHED)
+
+== (ii) pressure-zone hit rate, v0.6 -> v0.7 (predicted: move UP toward real) ==
+  C: sim 0.592 -> 0.592 (real 0.597)   err -0.8% -> -0.8%   flat/down
+  E: sim 0.723 -> 0.724 (real 0.726)   err -0.4% -> -0.3%   UP
+  F: sim 0.808 -> 0.809 (real 0.812)   err -0.5% -> -0.4%   UP
+  I: sim 0.789 -> 0.797 (real 0.797)   err -1.0% -> +0.0%   UP
+all four moved up: NO
