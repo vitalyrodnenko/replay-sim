@@ -32,8 +32,17 @@ class Perf:
     c_kv: float = 0.0035
     @classmethod
     def load(cls, path):
+        """Load the four coefficients, ignoring provenance metadata.
+
+        run 4: perf.json now also carries "a_source"/"note"/"online_fit" so a
+        hybrid fit (online `a`, offline b_p/b_d/c_kv) is self-describing. This
+        loader change is the only edit to simulator.py since v0.3 and touches
+        no physics -- the step model below is byte-identical to v0.3.
+        """
         with open(path) as f:
-            return cls(**json.load(f))
+            d = json.load(f)
+        known = set(cls.__dataclass_fields__)
+        return cls(**{k: v for k, v in d.items() if k in known})
 
 @dataclass
 class Cfg:

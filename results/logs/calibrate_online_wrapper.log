@@ -1,0 +1,133 @@
+=== [online-cal] stopping anything running ===
+stopped; VRAM in use: 255 MiB; compute apps: 0
+=== [online-cal] starting config-A server ===
+started config A (gpu-mem-util=0.85, max-num-batched-tokens=2048, --enable-prefix-caching) pid=63820
+=== [online-cal] waiting for readiness ===
+READY after 35s
+GPU KV cache size: 87,200 tokens
+=== [online-cal] calibrating ===
+frozen from results/perf_v03_offline.json: b_p=0.00041897 b_d=0.00032273 c_kv=0.016071   (offline a=0.012935, to be replaced)
+probe: sent 512 token ids, server reports prompt_tokens=512
+  online B=  1 ctx= 512 rep0:  13.58 ms/step  (median itl 13.57, batch spread 0.00, ramp skew      0 ms, win 183 steps, n=183)
+  online B=  1 ctx= 512 rep1:  13.58 ms/step  (median itl 13.58, batch spread 0.00, ramp skew      0 ms, win 183 steps, n=183)
+  online B=  1 ctx= 512 rep2:  13.57 ms/step  (median itl 13.57, batch spread 0.00, ramp skew      0 ms, win 183 steps, n=183)
+  online B=  8 ctx= 512 rep0:  16.61 ms/step  (median itl 16.61, batch spread 0.00, ramp skew     50 ms, win 178 steps, n=1427)
+  online B=  8 ctx= 512 rep1:  16.53 ms/step  (median itl 16.53, batch spread 0.00, ramp skew     50 ms, win 178 steps, n=1427)
+  online B=  8 ctx= 512 rep2:  16.60 ms/step  (median itl 16.61, batch spread 0.00, ramp skew     50 ms, win 178 steps, n=1427)
+  online B=  8 ctx=2048 rep0:  18.32 ms/step  (median itl 18.32, batch spread 0.00, ramp skew    146 ms, win 173 steps, n=1391)
+  online B=  8 ctx=2048 rep1:  18.28 ms/step  (median itl 18.28, batch spread 0.00, ramp skew    146 ms, win 173 steps, n=1391)
+  online B=  8 ctx=2048 rep2:  18.27 ms/step  (median itl 18.26, batch spread 0.00, ramp skew    164 ms, win 172 steps, n=1383)
+  online B= 32 ctx= 512 rep0:  26.39 ms/step  (median itl 26.36, batch spread 0.00, ramp skew    234 ms, win 172 steps, n=5530)
+  online B= 32 ctx= 512 rep1:  26.40 ms/step  (median itl 26.39, batch spread 0.01, ramp skew    235 ms, win 172 steps, n=5530)
+  online B= 32 ctx= 512 rep2:  26.38 ms/step  (median itl 26.36, batch spread 0.01, ramp skew    235 ms, win 172 steps, n=5530)
+  online B= 32 ctx=2048 rep0:  33.49 ms/step  (median itl 33.51, batch spread 0.01, ramp skew   1095 ms, win 149 steps, n=4778)
+  online B= 32 ctx=2048 rep1:  33.50 ms/step  (median itl 33.50, batch spread 0.00, ramp skew   1095 ms, win 149 steps, n=4778)
+  online B= 32 ctx=2048 rep2:  33.55 ms/step  (median itl 33.55, batch spread 0.00, ramp skew   1096 ms, win 149 steps, n=4778)
+  online B= 16 ctx=3072 rep0:  26.36 ms/step  (median itl 26.35, batch spread 0.00, ramp skew    602 ms, win 158 steps, n=2530)
+  online B= 16 ctx=3072 rep1:  26.36 ms/step  (median itl 26.36, batch spread 0.00, ramp skew    602 ms, win 158 steps, n=2530)
+  online B= 16 ctx=3072 rep2:  26.40 ms/step  (median itl 26.37, batch spread 0.00, ramp skew    602 ms, win 158 steps, n=2530)
+
+== per-point intercept ==
+   B   ctx  online ms  v0.3 model ms  delta ms  implied a ms
+   1   512      13.58          13.27      0.31         13.24
+   8   512      16.60          15.58      1.02         13.96
+   8  2048      18.28          15.78      2.50         15.44
+  32   512      26.39          23.53      2.86         15.80
+  32  2048      33.50          24.32      9.19         22.12
+
+a_online = 16.111 ms  (offline 12.935 ms, delta +3.176 ms)
+intercept spread across the grid: 8.878 ms, stdev 3.520 ms
+check point B=16 ctx=3072: online 26.36 ms, v0.3 model 18.89 ms, hybrid model 22.06 ms (hybrid err -16.3%)
+
+perf model: {
+  "a": 0.01611068936371704,
+  "b_p": 0.0004189681209309316,
+  "b_d": 0.00032272888031105207,
+  "c_kv": 0.01607134441771448,
+  "a_source": "online",
+  "bp_bd_ckv_source": "offline_v0.3_run3",
+  "note": "hybrid v0.4 model: the per-step constant `a` is refitted against the vLLM OpenAI HTTP server with stream=True (the path bench.py measures); b_p, b_d and c_kv are carried over unchanged from the v0.3 offline LLM() fit. kv_read convention for the refit is B*C, matching the offline decode fit.",
+  "online_fit": {
+    "grid": [
+      {
+        "B": 1,
+        "ctx": 512,
+        "step_ms": 13.575,
+        "median_itl_ms": 13.571,
+        "reps_ms": [
+          13.574,
+          13.575,
+          13.576
+        ],
+        "implied_a_ms": 13.244
+      },
+      {
+        "B": 8,
+        "ctx": 512,
+        "step_ms": 16.604,
+        "median_itl_ms": 16.613,
+        "reps_ms": [
+          16.535,
+          16.604,
+          16.61
+        ],
+        "implied_a_ms": 13.956
+      },
+      {
+        "B": 8,
+        "ctx": 2048,
+        "step_ms": 18.281,
+        "median_itl_ms": 18.278,
+        "reps_ms": [
+          18.265,
+          18.281,
+          18.324
+        ],
+        "implied_a_ms": 15.435
+      },
+      {
+        "B": 32,
+        "ctx": 512,
+        "step_ms": 26.386,
+        "median_itl_ms": 26.365,
+        "reps_ms": [
+          26.382,
+          26.386,
+          26.404
+        ],
+        "implied_a_ms": 15.795
+      },
+      {
+        "B": 32,
+        "ctx": 2048,
+        "step_ms": 33.503,
+        "median_itl_ms": 33.498,
+        "reps_ms": [
+          33.487,
+          33.503,
+          33.554
+        ],
+        "implied_a_ms": 22.122
+      }
+    ],
+    "check_points": [
+      {
+        "B": 16,
+        "ctx": 3072,
+        "step_ms": 26.364
+      }
+    ],
+    "a_offline_ms": 12.9351,
+    "a_online_ms": 16.1107,
+    "delta_ms": 3.1756,
+    "intercept_stdev_ms": 3.5197,
+    "gen_tokens": 256,
+    "warm_tokens": 64,
+    "tail_tokens": 8,
+    "repeats": 3
+  }
+}
+wrote results/perf_online_run4.json
+[online-cal] exit=0
+=== [online-cal] stopping server ===
+stopped; VRAM in use: 255 MiB; compute apps: 0
