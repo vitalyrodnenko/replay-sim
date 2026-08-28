@@ -1,0 +1,1 @@
+source .venv/bin/activate; source scripts/env.sh; python -m replay_sim.calibrate --model Qwen/Qwen3.8-27B-FP8 --tp 2 --out results/perf.json

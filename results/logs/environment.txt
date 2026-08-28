@@ -1,0 +1,46 @@
+=== date ===
+2026-08-27T17:15:28-05:00
+=== host ===
+Linux vitaly-ml-workstation 7.0.0-30-generic #30~24.04.1-Ubuntu SMP PREEMPT_DYNAMIC Fri Aug  7 13:27:52 UTC 2 x86_64 x86_64 x86_64 GNU/Linux
+=== nvidia-smi ===
+Thu Aug 27 17:15:28 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.173.02             Driver Version: 580.173.02     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA GeForce RTX 4090        Off |   00000000:01:00.0 Off |                  Off |
+|  0%   35C    P8             32W /  480W |     237MiB /  24564MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+|   1  NVIDIA GeForce RTX 4090        Off |   00000000:02:00.0 Off |                  Off |
+|  0%   35C    P8             17W /  500W |      18MiB /  24564MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    0   N/A  N/A            2123      G   /usr/bin/gnome-shell                    176MiB |
+|    0   N/A  N/A            2283      G   /usr/bin/Xwayland                         8MiB |
+|    1   N/A  N/A            2123      G   /usr/bin/gnome-shell                      6MiB |
++-----------------------------------------------------------------------------------------+
+=== driver/cuda ===
+index, name, driver_version, memory.total [MiB], compute_cap
+0, NVIDIA GeForce RTX 4090, 580.173.02, 24564 MiB, 8.9
+1, NVIDIA GeForce RTX 4090, 580.173.02, 24564 MiB, 8.9
+=== python ===
+Python 3.12.3
+=== key packages ===
+httpx                                    0.28.1
+numpy                                    2.3.5
+torch                                    2.13.0
+transformers                             5.16.1
+triton                                   3.7.1
+vllm                                     0.28.0
+=== vllm version ===
+0.28.0

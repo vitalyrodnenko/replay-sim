@@ -1,0 +1,14 @@
+tokenization verification: trace=results/trace.jsonl  tokenizer=Qwen/Qwen3-32B-AWQ
+requests: 192
+
+[1] tokens/word over full trace: min=1.000000 p50=1.000000 mean=1.000000 max=1.000000
+    within 1.00 +/- 1%: PASS
+
+[2] EXACT per-prompt equality (token count == word count): 192/192
+    drift distribution (tokens - words): {0: 192}
+    per-prompt exactness: PASS
+
+[3] max total tokens (prompt+output): 5167   fit in max-model-len 8192: 192/192
+
+[4] longest prompt req_id=190: words=4980 tokens=4980 -> EXACT MATCH
+    full 16-token blocks: 311  (simulator hashes 311 16-word blocks)
