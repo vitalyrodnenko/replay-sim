@@ -50,7 +50,7 @@ def main():
 
     # --- decode: batch of B seqs at ctx C, generate 64 tokens, per-step time
     rows = []
-    for B, C in [(1, 512), (8, 512), (32, 512), (8, 4096), (32, 2048)]:
+    for B, C in [(1, 512), (8, 512), (32, 512), (8, 4096), (32, 2048), (64, 512), (96, 512), (128, 256)]:
         p = prompt_of(C)
         sp = SamplingParams(max_tokens=64, ignore_eos=True)
         llm.generate([p] * B, sp)                  # warmup

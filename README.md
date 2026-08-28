@@ -85,3 +85,40 @@ is within 15 points of the real relative change.
 A config axis closer to the product: eviction/cache-size comparison
 under multi-tenant load, and routing across two replicas (the two 4090s
 as two replicas, session-affinity vs round-robin).
+
+---
+
+# v0.2 changelog (2026-08-27, after validation run 1)
+
+Fixes driven by REPORT.md findings, in the order of their evidence:
+
+1. Prefix-cache blocks are published during prefill, not on completion.
+   Overlapping requests now share the system prompt (was the dominant
+   defect: 1.77x excess prefill manufactured the config-A tail).
+2. Incremental KV allocation + routine preemption-by-recompute. Decode
+   blocks are allocated lazily per step; failure evicts cold cache, then
+   preempts the latest-arrival sequence (was: zero preemptions ever).
+3. Prefix cache coupled to the block pool (refcounted, shared capacity).
+   Shrinking the pool now degrades hit rate: the config-C sign error is
+   fixed (directional check: 0.862 -> 0.604 vs real 0.856 -> 0.597).
+4. prefix_cache_hit_rate is token-level, directly comparable to vLLM
+   /metrics. Block-lookup rate moved to block_lookup_hit_rate.
+5. --block-size is a CLI parameter (hybrid-model prerequisite).
+6. calibrate.py decode grid extended to saturated batches (64/96/128) to
+   absorb the TP all-reduce cost where it actually bites.
+7. bench.py --drop-first N excludes CUDA-graph warmup requests.
+
+# Validation discipline for run 2
+
+Configs A/B/C from run 1 are now DEVELOPMENT data: v0.2 was designed
+looking at their results. They can be used as a regression check but
+prove nothing. The validation claim requires held-out configs, predicted
+and frozen before any real run:
+
+    D (scheduler axis):  gpu-mem-util 0.85, --max-num-seqs 32
+    E (pool axis, unseen point): gpu-mem-util 0.70
+
+Recalibrate first (the grid changed), then predict D and E, commit, then
+run for real. The bar is unchanged: every config-change delta within 15
+points. Report the A/B/C regression numbers separately and label them
+"in-sample".

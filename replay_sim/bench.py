@@ -68,12 +68,14 @@ async def run(a):
     except Exception:
         pass
 
-    ttfts = sorted(v["ttft"] for v in results.values())
-    e2e = sorted(v["e2e"] for v in results.values())
-    out_tok = sum(v["output_len"] for v in results.values())
+    drop = sorted(results.keys())[:a.drop_first]
+    kept = {k: v for k, v in results.items() if k not in set(drop)}
+    ttfts = sorted(v["ttft"] for v in kept.values())
+    e2e = sorted(v["e2e"] for v in kept.values())
+    out_tok = sum(v["output_len"] for v in kept.values())
     def p(v, q): return v[min(len(v) - 1, int(q * len(v)))]
     s = {
-        "requests": len(results),
+        "requests": len(kept), "dropped_warmup": len(drop),
         "ttft_p50_s": round(p(ttfts, .5), 3), "ttft_p95_s": round(p(ttfts, .95), 3),
         "e2e_p50_s": round(p(e2e, .5), 3),   "e2e_p95_s": round(p(e2e, .95), 3),
         "throughput_tok_s": round(out_tok / makespan, 1),
@@ -92,6 +94,8 @@ def main():
     ap.add_argument("--speedup", type=float, default=1.0,
                     help=">1 compresses arrival times (heavier load)")
     ap.add_argument("--max-inflight", type=int, default=512)
+    ap.add_argument("--drop-first", type=int, default=0,
+                    help="exclude first N requests (CUDA-graph warmup)")
     a = ap.parse_args()
     asyncio.run(run(a))
 
