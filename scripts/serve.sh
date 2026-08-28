@@ -20,6 +20,15 @@ case "$cfg" in
   E)      GMU="${2:-0.70}"; MBT=2048; PC="--enable-prefix-caching" ;;
   F)      GMU="${2:-0.78}"; MBT=2048; PC="--enable-prefix-caching" ;;
   G)      GMU="${2:-0.85}"; MBT=8192; PC="--enable-prefix-caching" ;;
+  # run 5 held-out configs. H probes the pool axis above every point used so
+  # far; 0.93 is above the 0.90 that OOMed in CUDA-graph capture in runs 1-2,
+  # so H is expected to be the one that can fail to come up. I crosses pool
+  # pressure with the coarse prefill budget for the first time.
+  # H was specified at 0.93; 0.93 and 0.90 both die in CUDA-graph capture on
+  # this box (results/logs/pool_ceiling_run5.txt). 0.88 is the highest bootable
+  # point and is still above every utilisation used in runs 1-4 (max 0.85).
+  H)      GMU="${2:-0.88}"; MBT=2048; PC="--enable-prefix-caching" ;;
+  I)      GMU="${2:-0.78}"; MBT=8192; PC="--enable-prefix-caching" ;;
   *) echo "unknown config: $cfg" >&2; exit 1 ;;
 esac
 

@@ -1,0 +1,26 @@
+Run 5, before freezing predictions: probing config H as specified (gpu-mem-util 0.93).
+Each probe = start a server with config-H settings at that utilisation, poll /health,
+read the pool from the startup log, stop. Ladder:
+
+  0.93  SERVER_DIED after 35s   CUDA OOM during CUDA-graph capture
+  0.90  SERVER_DIED after 40s   CUDA OOM during CUDA-graph capture
+  0.88  READY after 35s         <- highest bootable point found
+  0.86  READY after 35s
+
+At 0.93 the engine sizes the pool (log: "GPU KV cache size: 102,608 tokens") and
+then dies capturing CUDA graphs:
+  torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 2.00 MiB. GPU 0 has
+  a total capacity of 23.52 GiB of which 2.12 MiB is free. ... 47.86 MiB allocated
+  in private pools (e.g., CUDA Graphs)
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True was already set (scripts/env.sh).
+This is the same failure mode serve.sh documents at 0.90 in runs 1-2, unchanged.
+
+METHOD NOTE: the first version of scripts/probe_pool.sh did not forward the
+utilisation override to serve.sh, so an earlier ladder (0.90/0.88/0.87/0.86/0.82
+"all failed") had in fact run every probe at 0.93. The script was fixed to forward
+the argument and the ladder above is the corrected one. The bad ladder was never
+used for a prediction.
+
+CONCLUSION: H at 0.93 is not runnable on this box. H is run at 0.88 instead -- still
+an UNSEEN pool point, and still ABOVE every point used in runs 1-4 (max 0.85), so
+the extrapolation the config was chosen to test is preserved.

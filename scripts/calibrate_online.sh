@@ -24,9 +24,9 @@ grep -aoE "GPU KV cache size: [0-9,]+ tokens" results/logs/server_A.log | tail -
 
 echo "=== [online-cal] calibrating ==="
 cmd="python -m replay_sim.calibrate --mode online --model $MODEL \
---offline-perf results/perf_v03_offline.json --out results/perf_online_run4.json"
+--offline-perf results/perf_v03_offline.json --fit full --mbt 2048 --out results/perf_online_run5.json"
 echo "$cmd" > results/logs/calibrate_online_cmd.txt
-$cmd 2>&1 | tee results/logs/calibrate_online_run4.log
+$cmd 2>&1 | tee results/logs/calibrate_online_run5.log
 rc=${PIPESTATUS[0]}
 echo "[online-cal] exit=$rc"
 

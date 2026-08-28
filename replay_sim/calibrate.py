@@ -105,8 +105,21 @@ def offline_main(a):
 # also in the v0.3 offline decode grid, so online and offline step times are
 # directly comparable at the same operating point. The last is a check point
 # held out of the fit, at the trace's median prompt length.
-ONLINE_GRID = [(1, 512), (8, 512), (8, 2048), (32, 512), (32, 2048)]
+# Decode fit grid, run 5: batch AND context both swept, with kv = B*C
+# decorrelated from B (at B=8: kv 4k/16k/32k; at B=16: 16k/65k; at B=64:
+# 32k/49k). Peak KV per point is B*(ctx+gen) <= 74k against config A's
+# 87,200-token pool, so no point runs near enough to preempt.
+ONLINE_GRID = [(1, 512), (1, 4096), (4, 4096),
+               (8, 512), (8, 2048), (8, 4096),
+               (16, 1024), (16, 4096),
+               (32, 512), (32, 2048),
+               (64, 512), (64, 768),
+               (96, 512), (128, 256)]
+# Held out of every fit, reported as the calibration's own test point.
 ONLINE_CHECK = [(16, 3072)]
+# Prefill sweep for b_p: single request, one token out, TTFT vs prompt
+# length. ceil(C/mbt) varies 1..4 so the per-step constant is separable.
+ONLINE_PREFILL = [256, 512, 1024, 2048, 3072, 4096, 6144, 7168]
 
 
 def _prompt_ids(rng, n_tok, filler_id):
@@ -190,6 +203,47 @@ async def _measure_point(client, a, rng, filler_id, B, C):
             "window_steps": min(n_int), "samples": len(deltas)}
 
 
+async def _preemptions(client, base):
+    """vLLM's preemption counter. A point that preempts is not a clean
+    fixed-batch measurement, so every decode point is bracketed by this."""
+    try:
+        m = (await client.get(base + "/metrics", timeout=30)).text
+    except Exception:
+        return None
+    for line in m.splitlines():
+        if line.startswith("vllm:num_preemptions_total"):
+            try:
+                return float(line.split()[-1])
+            except ValueError:
+                return None
+    return 0.0
+
+
+async def _measure_prefill(client, a, rng, filler_id, C):
+    """TTFT of a single request, no other load. One prefill, one decode step.
+
+    Same client, same endpoint, same streaming path as the decode points and
+    as bench.py -- so b_p lands on the online path too rather than being
+    carried over from the offline LLM() fit.
+    """
+    ttfts = []
+    for _ in range(a.repeats):
+        ids = _prompt_ids(rng, C, filler_id)
+        t0 = time.perf_counter()
+        async with client.stream("POST", a.base + "/v1/completions", timeout=600,
+                                 json={"model": a.model, "prompt": ids,
+                                       "max_tokens": 1, "ignore_eos": True,
+                                       "temperature": 0.0, "stream": True}) as r:
+            r.raise_for_status()
+            async for line in r.aiter_lines():
+                if line.startswith("data:") and line.strip() != "data: [DONE]":
+                    ttfts.append(time.perf_counter() - t0)
+                    break
+    ttfts.sort()
+    return {"ctx": C, "ttft_s": ttfts[len(ttfts) // 2],
+            "reps_ms": [round(1000 * v, 3) for v in ttfts]}
+
+
 async def _online_run(a):
     import asyncio, httpx, random
 
@@ -220,10 +274,22 @@ async def _online_run(a):
             raise RuntimeError("server did not accept token-id prompts at face "
                                f"value ({got} != {probe_n}); cannot pin ctx")
 
+        prefill = []
+        if a.fit == "full":
+            print("\n-- prefill sweep (single request, TTFT vs prompt) --")
+            for C in ONLINE_PREFILL:
+                m = await _measure_prefill(client, a, rng, filler_id, C)
+                prefill.append(m)
+                print(f"  online prefill ctx={C:>5}: {m['ttft_s']*1000:8.1f} ms "
+                      f"(reps {m['reps_ms']})")
+                await asyncio.sleep(a.settle_s)
+
+        print("\n-- decode sweep (steady state at fixed batch) --")
         rows, checks = [], []
         for grid, sink in ((ONLINE_GRID, rows), (ONLINE_CHECK, checks)):
             for (B, C) in grid:
                 reps = []
+                p_before = await _preemptions(client, a.base)
                 for k in range(a.repeats):
                     m = await _measure_point(client, a, rng, filler_id, B, C)
                     reps.append(m)
@@ -234,83 +300,151 @@ async def _online_run(a):
                           f"ramp skew {m['window_skew_s']*1000:6.0f} ms, "
                           f"win {m['window_steps']} steps, n={m['samples']})")
                     await asyncio.sleep(a.settle_s)
+                p_after = await _preemptions(client, a.base)
+                preempted = (p_before is not None and p_after is not None
+                             and p_after > p_before)
+                if preempted:
+                    print(f"  WARNING B={B} ctx={C}: engine preempted "
+                          f"{p_after - p_before:.0f} time(s) during this point; "
+                          f"it is NOT a clean fixed-batch measurement.")
                 reps.sort(key=lambda m: m["step_s"])
                 best = reps[len(reps) // 2]      # median rep
                 best["reps_ms"] = [round(m["step_s"] * 1000, 3) for m in reps]
+                best["preempted"] = bool(preempted)
                 sink.append(best)
-    return base_perf, rows, checks
+    return base_perf, rows, checks, prefill
 
 
 def online_main(a):
     import asyncio
-    base_perf, rows, checks = asyncio.run(_online_run(a))
-    b_p, b_d, c_kv = base_perf["b_p"], base_perf["b_d"], base_perf["c_kv"]
+    import numpy as np
+    base_perf, rows, checks, prefill = asyncio.run(_online_run(a))
+    b_p_off, b_d_off, c_kv_off = (base_perf["b_p"], base_perf["b_d"],
+                                  base_perf["c_kv"])
     a_offline = base_perf["a"]
 
-    def resid(m):
-        return m["step_s"] - b_d * m["B"] - c_kv * (m["B"] * m["ctx"]) / 1e6
+    prov = {"a_source": "online", "bd_ckv_source": "offline_v0.3_run3",
+            "bp_source": "offline_v0.3_run3"}
 
-    def pred_old(m):
-        return a_offline + b_d * m["B"] + c_kv * (m["B"] * m["ctx"]) / 1e6
+    # ---------------- prefill: b_p on the online path ----------------
+    b_p, prefill_fit = b_p_off, None
+    if a.fit == "full" and prefill:
+        # TTFT = d + a_p*ceil(C/mbt) + b_p*C : the per-step constant is
+        # separable because the chunk count varies 1..4 across the sweep.
+        A_ = np.array([[1.0, -(-C // a.mbt), C] for C in
+                       [m["ctx"] for m in prefill]])
+        y_ = np.array([m["ttft_s"] for m in prefill])
+        coef, *_ = np.linalg.lstsq(A_, y_, rcond=None)
+        d_p, a_p, b_p_on = coef.tolist()
+        pred = A_ @ coef
+        r2p = 1 - float(((y_ - pred) ** 2).sum()) / float(
+            ((y_ - y_.mean()) ** 2).sum())
+        print("\n== prefill fit (online) ==")
+        print(f"{'ctx':>6} {'ttft ms':>9} {'fit ms':>9} {'resid ms':>9}")
+        for m, pv in zip(prefill, pred):
+            print(f"{m['ctx']:>6} {m['ttft_s']*1000:>9.1f} {pv*1000:>9.1f} "
+                  f"{(m['ttft_s']-pv)*1000:>9.1f}")
+        print(f"prefill fit R^2 = {r2p:.5f}   b_p = {b_p_on:.8f} "
+              f"(offline {b_p_off:.8f}, {100*(b_p_on-b_p_off)/b_p_off:+.1f}%)")
+        print(f"  per-chunk constant a_p = {a_p*1000:.2f} ms, "
+              f"intercept d = {d_p*1000:.2f} ms")
+        if b_p_on <= 0:
+            print("WARNING: b_p fitted <= 0 online; keeping the offline value.")
+        else:
+            b_p = float(b_p_on)
+            prov["bp_source"] = "online"
+            prefill_fit = {"r2": round(r2p, 5), "b_p": b_p,
+                           "a_per_chunk_ms": round(a_p * 1000, 4),
+                           "intercept_ms": round(d_p * 1000, 4),
+                           "points": [{"ctx": m["ctx"],
+                                       "ttft_ms": round(m["ttft_s"] * 1000, 3),
+                                       "reps_ms": m["reps_ms"]}
+                                      for m in prefill]}
 
-    print("\n== per-point intercept ==")
-    print(f"{'B':>4} {'ctx':>5} {'online ms':>10} {'v0.3 model ms':>14} "
-          f"{'delta ms':>9} {'implied a ms':>13}")
-    rs = []
-    for m in rows:
-        rs.append(resid(m))
-        print(f"{m['B']:>4} {m['ctx']:>5} {m['step_s']*1000:10.2f} "
-              f"{pred_old(m)*1000:14.2f} {(m['step_s']-pred_old(m))*1000:9.2f} "
-              f"{resid(m)*1000:13.2f}")
+    # ---------------- decode: a, b_d, c_kv jointly ----------------
+    clean = [m for m in rows if not m.get("preempted")]
+    if len(clean) < len(rows):
+        print(f"\nNOTE: {len(rows)-len(clean)} decode point(s) preempted and "
+              f"are excluded from the fit.")
+    A_ = np.array([[1.0, m["B"], m["B"] * m["ctx"] / 1e6] for m in clean])
+    y_ = np.array([m["step_s"] for m in clean])
 
-    a_online = sum(rs) / len(rs)
-    spread = max(rs) - min(rs)
-    sd = (sum((r - a_online) ** 2 for r in rs) / max(1, len(rs) - 1)) ** 0.5
-    print(f"\na_online = {a_online*1000:.3f} ms  (offline {a_offline*1000:.3f} "
-          f"ms, delta {(a_online-a_offline)*1000:+.3f} ms)")
-    print(f"intercept spread across the grid: {spread*1000:.3f} ms, "
-          f"stdev {sd*1000:.3f} ms")
-    if sd > 0.25 * abs(a_online):
-        print("WARNING: the implied intercept is not constant across the grid; "
-              "a single per-step constant does not describe the online "
-              "overhead. Record this before predicting.")
+    if a.fit == "full":
+        coef, *_ = np.linalg.lstsq(A_, y_, rcond=None)
+        a_new, b_d, c_kv = coef.tolist()
+        prov["bd_ckv_source"] = "online"
+    else:                      # run-4 behaviour: intercept only
+        b_d, c_kv = b_d_off, c_kv_off
+        a_new = float(np.mean(y_ - b_d * A_[:, 1] - c_kv * A_[:, 2]))
+        coef = np.array([a_new, b_d, c_kv])
 
+    pred = A_ @ coef
+    ss_res = float(((y_ - pred) ** 2).sum())
+    ss_tot = float(((y_ - y_.mean()) ** 2).sum())
+    r2 = 1 - ss_res / ss_tot if ss_tot else float("nan")
+
+    print("\n== decode fit (online) ==")
+    print(f"{'B':>4} {'ctx':>6} {'measured':>9} {'fit':>8} {'resid':>8} "
+          f"{'resid %':>8}")
+    for m, pv in zip(clean, pred):
+        print(f"{m['B']:>4} {m['ctx']:>6} {m['step_s']*1000:>9.2f} "
+              f"{pv*1000:>8.2f} {(m['step_s']-pv)*1000:>+8.2f} "
+              f"{100*(pv-m['step_s'])/m['step_s']:>+7.1f}%")
+    print(f"decode fit R^2 = {r2:.5f}")
+    print(f"\n            {'a (ms)':>10} {'b_p':>13} {'b_d':>13} {'c_kv':>10}")
+    print(f"v0.3 offline {a_offline*1000:>9.3f} {b_p_off:>13.8f} "
+          f"{b_d_off:>13.8f} {c_kv_off:>10.5f}")
+    print(f"v0.5 online  {a_new*1000:>9.3f} {b_p:>13.8f} "
+          f"{b_d:>13.8f} {c_kv:>10.5f}")
+    if c_kv <= 0:
+        print("WARNING: c_kv fitted <= 0 online. The grid still cannot "
+              "identify the KV term. Record before predicting.")
+
+    # ---------------- held-out check point ----------------
+    check = []
     for m in checks:
-        m_pred_new = a_online + b_d * m["B"] + c_kv * (m["B"] * m["ctx"]) / 1e6
-        print(f"check point B={m['B']} ctx={m['ctx']}: online "
-              f"{m['step_s']*1000:.2f} ms, v0.3 model {pred_old(m)*1000:.2f} ms, "
-              f"hybrid model {m_pred_new*1000:.2f} ms "
-              f"(hybrid err {100*(m_pred_new-m['step_s'])/m['step_s']:+.1f}%)")
-
-    perf = {
-        "a": float(a_online), "b_p": float(b_p),
-        "b_d": float(b_d), "c_kv": float(c_kv),
-        "a_source": "online",
-        "bp_bd_ckv_source": "offline_v0.3_run3",
-        "note": ("hybrid v0.4 model: the per-step constant `a` is refitted "
-                 "against the vLLM OpenAI HTTP server with stream=True (the "
-                 "path bench.py measures); b_p, b_d and c_kv are carried over "
-                 "unchanged from the v0.3 offline LLM() fit. kv_read convention "
-                 "for the refit is B*C, matching the offline decode fit."),
-        "online_fit": {
-            "grid": [{"B": m["B"], "ctx": m["ctx"],
+        p_new = a_new + b_d * m["B"] + c_kv * (m["B"] * m["ctx"]) / 1e6
+        p_v03 = a_offline + b_d_off * m["B"] + c_kv_off * (m["B"] * m["ctx"]) / 1e6
+        p_v04 = 0.0161107 + b_d_off * m["B"] + c_kv_off * (m["B"] * m["ctx"]) / 1e6
+        e_new = 100 * (p_new - m["step_s"]) / m["step_s"]
+        print(f"\nHELD-OUT CHECK POINT B={m['B']} ctx={m['ctx']}: "
+              f"measured {m['step_s']*1000:.2f} ms")
+        print(f"  v0.3 model {p_v03*1000:6.2f} ms  "
+              f"({100*(p_v03-m['step_s'])/m['step_s']:+.1f}%)")
+        print(f"  v0.4 model {p_v04*1000:6.2f} ms  "
+              f"({100*(p_v04-m['step_s'])/m['step_s']:+.1f}%)")
+        print(f"  v0.5 model {p_new*1000:6.2f} ms  ({e_new:+.1f}%)  <-- this run")
+        check.append({"B": m["B"], "ctx": m["ctx"],
                       "step_ms": round(m["step_s"] * 1000, 3),
-                      "median_itl_ms": round(m["median_itl_s"] * 1000, 3),
-                      "reps_ms": m["reps_ms"],
-                      "implied_a_ms": round(resid(m) * 1000, 3)} for m in rows],
-            "check_points": [{"B": m["B"], "ctx": m["ctx"],
-                              "step_ms": round(m["step_s"] * 1000, 3)}
-                             for m in checks],
-            "a_offline_ms": round(a_offline * 1000, 4),
-            "a_online_ms": round(a_online * 1000, 4),
-            "delta_ms": round((a_online - a_offline) * 1000, 4),
-            "intercept_stdev_ms": round(sd * 1000, 4),
-            "gen_tokens": a.gen_tokens, "warm_tokens": a.warm_tokens,
-            "tail_tokens": a.tail_tokens, "repeats": a.repeats,
-        },
-    }
+                      "v03_pred_ms": round(p_v03 * 1000, 3),
+                      "v04_pred_ms": round(p_v04 * 1000, 3),
+                      "v05_pred_ms": round(p_new * 1000, 3),
+                      "v05_err_pct": round(e_new, 2)})
+
+    perf = {"a": float(a_new), "b_p": float(b_p),
+            "b_d": float(b_d), "c_kv": float(c_kv), **prov,
+            "note": ("v0.5: every coefficient this harness can reach is "
+                     "fitted on the vLLM OpenAI HTTP server with stream=True, "
+                     "the path bench.py measures. Decode coefficients come "
+                     "from steady-state inter-token intervals inside a window "
+                     "where all B streams are co-resident; b_p from TTFT of a "
+                     "single unloaded request. kv_read convention is B*C. "
+                     "B=16/ctx=3072 is held out of every fit."),
+            "online_fit": {
+                "mode": a.fit,
+                "decode_r2": round(r2, 5),
+                "grid": [{"B": m["B"], "ctx": m["ctx"],
+                          "step_ms": round(m["step_s"] * 1000, 3),
+                          "median_itl_ms": round(m["median_itl_s"] * 1000, 3),
+                          "reps_ms": m["reps_ms"],
+                          "preempted": m.get("preempted", False)} for m in rows],
+                "held_out_check": check,
+                "prefill_fit": prefill_fit,
+                "gen_tokens": a.gen_tokens, "warm_tokens": a.warm_tokens,
+                "tail_tokens": a.tail_tokens, "repeats": a.repeats}}
     json.dump(perf, open(a.out, "w"), indent=2)
-    print("\nperf model:", json.dumps(perf, indent=2))
+    print("\nperf model:", json.dumps({k: v for k, v in perf.items()
+                                       if k != "online_fit"}, indent=2))
     print(f"wrote {a.out}")
 
 
@@ -335,6 +469,13 @@ def main():
     ap.add_argument("--repeats", type=int, default=3)
     ap.add_argument("--settle-s", type=float, default=3.0)
     ap.add_argument("--seed", type=int, default=20260828)
+    ap.add_argument("--fit", choices=["a", "full"], default="full",
+                    help="'a': run-4 behaviour, refit the intercept only. "
+                         "'full': refit a, b_d, c_kv from the decode "
+                         "sweep and b_p from the prefill sweep.")
+    ap.add_argument("--mbt", type=int, default=2048,
+                    help="server --max-num-batched-tokens, for the "
+                         "prefill chunk count in the b_p fit")
     a = ap.parse_args()
     (online_main if a.mode == "online" else offline_main)(a)
 
