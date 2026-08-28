@@ -11,3 +11,15 @@ nvidia_smi_C_probe.csv             GPU0  samples=  11  util avg=  5.2% max= 57.0
 nvidia_smi_C_probe.csv             GPU1  samples=  11  util avg= 11.0% max= 63.0%  mem max=  16738 MiB  power avg= 67.8W max=189.8W
 nvidia_smi_calibrate.csv           GPU0  samples= 297  util avg= 26.3% max=100.0%  mem max=  24079 MiB  power avg=110.1W max=290.8W
 nvidia_smi_calibrate.csv           GPU1  samples= 297  util avg= 44.1% max=100.0%  mem max=  24030 MiB  power avg=104.1W max=279.1W
+
+--- run 2 ---
+nvidia_smi_A.csv       GPU0 samples=  32 util avg= 93.8% mem max=  22997 MiB
+nvidia_smi_A.csv       GPU1 samples=  32 util avg= 93.8% mem max=  22778 MiB
+nvidia_smi_B.csv       GPU0 samples=  64 util avg= 98.4% mem max=  22997 MiB
+nvidia_smi_B.csv       GPU1 samples=  64 util avg= 98.4% mem max=  22778 MiB
+nvidia_smi_C.csv       GPU0 samples=  39 util avg= 94.9% mem max=  16977 MiB
+nvidia_smi_C.csv       GPU1 samples=  39 util avg= 94.9% mem max=  16758 MiB
+nvidia_smi_D.csv       GPU0 samples=  32 util avg= 93.8% mem max=  21901 MiB
+nvidia_smi_D.csv       GPU1 samples=  32 util avg= 93.1% mem max=  21682 MiB
+nvidia_smi_E.csv       GPU0 samples=  34 util avg= 94.1% mem max=  19377 MiB
+nvidia_smi_E.csv       GPU1 samples=  34 util avg= 94.1% mem max=  19158 MiB

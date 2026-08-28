@@ -1,0 +1,1 @@
+python -m replay_sim.compare --sim results/sim_A.json results/sim_B.json results/sim_C.json --real results/real_A.json results/real_B.json results/real_C.json --labels A B C

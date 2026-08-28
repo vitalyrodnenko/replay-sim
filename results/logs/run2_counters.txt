@@ -1,0 +1,6 @@
+engine counters and sim predictions, run 2
+  A: real queries=607756.0 hits=520160.0 hit_rate=0.8558697898498739 preempt_real=0.0 | sim preempt=0 sim_hit=0.862
+  B: real queries=0.0 hits=0.0 hit_rate=None preempt_real=9.0 | sim preempt=11 sim_hit=0.0
+  C: real queries=607756.0 hits=362864.0 hit_rate=0.5970553972317838 preempt_real=10.0 | sim preempt=16 sim_hit=0.6
+  D: real queries=607756.0 hits=521808.0 hit_rate=0.8585814043793891 preempt_real=0.0 | sim preempt=0 sim_hit=0.862
+  E: real queries=607756.0 hits=441136.0 hit_rate=0.725843924206425 preempt_real=0.0 | sim preempt=0 sim_hit=0.746

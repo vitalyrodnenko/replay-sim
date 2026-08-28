@@ -1,0 +1,1 @@
+python -m replay_sim.bench --trace results/trace.jsonl --model Qwen/Qwen3-32B-AWQ --drop-first 10 --out results/real_D.json

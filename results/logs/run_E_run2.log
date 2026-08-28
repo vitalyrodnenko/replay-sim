@@ -1,0 +1,20 @@
+=== [E] stopping anything running ===
+stopped; VRAM in use: 255 MiB; compute apps: 0
+=== [E] starting server ===
+started config E (gpu-mem-util=0.70, max-num-batched-tokens=2048, --enable-prefix-caching) pid=38806
+=== [E] waiting for readiness ===
+READY after 35s
+GPU KV cache size: 58,304 tokens
+=== [E] starting nvidia-smi sampler ===
+=== [E] running bench.py ===
+[E] bench exit=0
+=== [E] engine-side metrics snapshot ===
+vllm:kv_cache_usage_perc{engine="0",model_name="Qwen/Qwen3-32B-AWQ"} 0.0
+vllm:prefix_cache_queries_total{engine="0",model_name="Qwen/Qwen3-32B-AWQ"} 607756.0
+vllm:prefix_cache_queries_created{engine="0",model_name="Qwen/Qwen3-32B-AWQ"} 1.7878880696239052e+09
+vllm:prefix_cache_hits_total{engine="0",model_name="Qwen/Qwen3-32B-AWQ"} 441136.0
+vllm:prefix_cache_hits_created{engine="0",model_name="Qwen/Qwen3-32B-AWQ"} 1.7878880696239133e+09
+vllm:num_preemptions_total{engine="0",model_name="Qwen/Qwen3-32B-AWQ"} 0.0
+vllm:num_preemptions_created{engine="0",model_name="Qwen/Qwen3-32B-AWQ"} 1.78788806962395e+09
+=== [E] stopping server ===
+stopped; VRAM in use: 255 MiB; compute apps: 0

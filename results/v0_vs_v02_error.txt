@@ -1,0 +1,39 @@
+ABSOLUTE ERROR (sim vs real), v0 run 1 -> v0.2 run 2, in-sample configs
+
+config metric                        v0 err    v0.2 err        change
+A      ttft_p50_s                     25.4%        6.1%        better
+A      ttft_p95_s                    867.0%       27.3%        better
+A      e2e_p50_s                       2.3%       23.2%         worse
+A      e2e_p95_s                     388.4%       24.5%        better
+A      throughput_tok_s                0.9%        5.9%         worse
+A      prefix_cache_hit_rate          15.2%        0.7%        better
+
+B      ttft_p50_s                     22.8%       20.8%         ~same
+B      ttft_p95_s                     17.6%       13.4%        better
+B      e2e_p50_s                      16.2%       12.1%        better
+B      e2e_p95_s                      15.8%       12.4%        better
+B      throughput_tok_s                9.9%       12.7%         worse
+
+C      ttft_p50_s                     76.1%       16.4%        better
+C      ttft_p95_s                     84.5%       13.2%        better
+C      e2e_p50_s                      68.4%       42.3%        better
+C      e2e_p95_s                      58.0%        8.5%        better
+C      throughput_tok_s               22.5%        6.4%        better
+C      prefix_cache_hit_rate          65.7%        0.5%        better
+
+v0   mean |error| over in-sample configs:  103.3%  (n=17)
+v0.2 mean |error| over in-sample configs:   14.5%  (n=17)
+
+DELTA GAPS vs config A (points), in-sample
+row                                   v0 gap  v0.2 gap
+B vs A  ttft_p50_s                   7471.9   3528.0
+B vs A  ttft_p95_s                  15588.0   7252.0
+B vs A  e2e_p50_s                     267.8    286.2
+B vs A  e2e_p95_s                    1836.3    370.6
+B vs A  throughput_tok_s                4.5      3.2
+C vs A  ttft_p50_s                    340.7     62.5
+C vs A  ttft_p95_s                   3187.0   1367.7
+C vs A  e2e_p50_s                     199.6     76.2
+C vs A  e2e_p95_s                     501.7    120.9
+C vs A  throughput_tok_s               17.7      0.4
+C vs A  prefix_cache_hit_rate          30.6      0.1
