@@ -148,3 +148,45 @@ points. Report the A/B/C regression numbers separately and label them
   unseen point 0.78, G = --max-batched-tokens 8192 (chunked-prefill
   axis, never varied before). Predict, commit, then run.
 - Use --drop-first 10 on BOTH bench.py and simulator.py, same N.
+
+---
+
+# VERDICT CRITERION v2
+
+Adopted in writing between runs 4 and 5, prospective from run 5.
+Runs 1-4 verdicts stand as published under v1.
+
+VERDICT CRITERION v2 — adopted in writing between runs 4 and 5,
+prospective from run 5. Runs 1-4 verdicts stand as published under v1.
+
+Motivation: run 3 §7.4 and run 4 §7 document that a relative-only bar
+amplifies sub-second baseline errors into hundred-point gaps and scored
+a 40% absolute-error reduction as a regression. Product semantics:
+cost questions are asked in relative terms ("how much will we save");
+latency questions are asked against absolute SLOs ("will p95 stay
+under X ms").
+
+Rules:
+1. Cost metrics (throughput_tok_s, gpu_s_per_1k_out_tok,
+   prefix_cache_hit_rate): unchanged — relative delta gap <= 15 pt.
+2. Latency metrics (ttft/e2e, p50/p95): a row passes if the relative
+   delta gap <= 15 pt OR the absolute prediction error on the target
+   config's value is <= 15%.
+3. Every report shows both counts (v1 and v2) for the full series.
+4. Further changes only between rounds, in writing, with motivation.
+
+# Run 5 protocol notes
+
+- Calibration: complete the online refit. b_d and c_kv move to the
+  online steady-state-window method used for `a` in run 4, sweeping
+  batch AND context; b_p is refit online from the same harness if it
+  covers prefill, otherwise it stays offline and perf.json says so.
+  B=16/ctx=3072 stays held out of the fit and its error is reported as
+  the calibration's own held-out test.
+- A-G are all development data. Run 5 held-out configs, measurements
+  not yet in existence:
+    H: gpu-mem-util 0.93, max-num-seqs 128, mbt 2048  (unseen pool point)
+    I: gpu-mem-util 0.78, mbt 8192                    (crossed axes:
+       pool pressure x prefill granularity, never tested jointly)
+- Predict H, I and A-G, commit, freeze, then run H and I for real.
+- Use --drop-first 10 on BOTH bench.py and simulator.py, same N.
