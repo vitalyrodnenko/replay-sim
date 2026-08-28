@@ -84,6 +84,13 @@ async def run(a):
     }
     print(json.dumps(s, indent=2))
     json.dump(s, open(a.out, "w"), indent=2)
+    if a.per_request:
+        with open(a.per_request, "w") as f:
+            for rid in sorted(results):
+                v = results[rid]
+                f.write(json.dumps({"rid": rid, "ttft": round(v["ttft"],4),
+                    "e2e": round(v["e2e"],4),
+                    "prompt_len": v["prompt_len"]}) + "\n")
 
 def main():
     ap = argparse.ArgumentParser()
@@ -94,6 +101,8 @@ def main():
     ap.add_argument("--speedup", type=float, default=1.0,
                     help=">1 compresses arrival times (heavier load)")
     ap.add_argument("--max-inflight", type=int, default=512)
+    ap.add_argument("--per-request", default=None,
+                    help="write per-request jsonl (all requests, pre-drop)")
     ap.add_argument("--drop-first", type=int, default=0,
                     help="exclude first N requests (CUDA-graph warmup)")
     a = ap.parse_args()

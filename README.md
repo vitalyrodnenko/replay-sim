@@ -246,3 +246,23 @@ the F sign flip.
 > None of that was installed; trace sha256 verified unchanged. simulator.py was
 > taken as delivered with only Perf.load's provenance-key tolerance re-applied,
 > which the archive reverted again and without which it cannot read perf.json.
+
+# Diagnostic run 8a (no physics change, no verdict)
+
+Per-request instrumentation: simulator --per-request, bench --per-request,
+and replay_sim/diagnose.py. Purpose: identify WHICH requests occupy the
+ttft_p95 in sim and real for the failing configs (F, J, K, plus H), and
+whether they are the same requests. Membership overlap decides the next
+hypothesis class: same requests = magnitude error in a modeled cost;
+different requests = a scheduling mechanism the model lacks. This is a
+measurement run: re-run F, J, K, H real benches with --per-request (their
+summary reals stay canonical for the series; these runs are diagnostic),
+re-simulate the four with --per-request, then diagnose each pair.
+
+> NOTE on this drop-in (run 8a). Taken: simulator.py, bench.py, the new
+> replay_sim/diagnose.py, and the section above. The archive shipped the
+> pre-run-4 calibrate.py and the pristine pre-fix workload.py for the FIFTH
+> consecutive time; neither installed, trace sha256 verified unchanged.
+> simulator.py was verified to differ from the installed v0.7 only by the
+> --per-request dump code (plus Perf.load's provenance tolerance, which the
+> archive reverted again and which was re-applied). No physics change.

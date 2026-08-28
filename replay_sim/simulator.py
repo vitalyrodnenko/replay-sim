@@ -41,11 +41,10 @@ class Perf:
     def load(cls, path):
         """Load the four coefficients, ignoring provenance metadata.
 
-        Re-applied on top of the v0.7 drop-in, which reverted it again (as v0.6
-        did). perf.json has carried "a_source"/"bp_source"/"note"/"online_fit"
-        since run 4 and the plain loader raises TypeError on them. No physics
-        touched -- the v0.7 step model and eviction order below are exactly as
-        delivered.
+        Re-applied on top of the run-8a diagnostic drop-in, which reverted it
+        for the third time (v0.6 and v0.7 did too). perf.json has carried
+        "a_source"/"bp_source"/"note"/"online_fit" since run 4 and the plain
+        loader raises TypeError on them. No physics touched.
         """
         with open(path) as f:
             d = json.load(f)
@@ -361,6 +360,9 @@ def main():
     ap.add_argument("--drop-first", type=int, default=0,
                     help="exclude first N arrivals from summary stats, "
                          "matching bench.py --drop-first (still simulated)")
+    ap.add_argument("--per-request", default=None,
+                    help="write per-request jsonl: rid, arrival, ttft, e2e, "
+                         "cached tokens, preemptions, prompt_len")
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
     trace = [json.loads(l) for l in open(a.trace)]
@@ -371,6 +373,13 @@ def main():
               prefix_caching=not a.no_prefix_caching)
     reqs, agg = simulate(trace, cfg, perf)
     s = summarize(reqs, agg, drop_first=a.drop_first)
+    if a.per_request:
+        with open(a.per_request, "w") as f:
+            for r in sorted(reqs, key=lambda r: r.rid):
+                f.write(json.dumps({"rid": r.rid, "arrival": round(r.arrival,3),
+                    "ttft": round(r.ttft,4), "e2e": round(r.finish-r.arrival,4),
+                    "cached_tok": r.cached, "preempt": r.preemptions,
+                    "prompt_len": r.prompt_len}) + "\n")
     s["config"] = {"num_blocks": cfg.num_blocks, "block_size": cfg.block_size,
                    "max_num_seqs": cfg.max_num_seqs,
                    "max_batched_tokens": cfg.max_batched_tokens,
