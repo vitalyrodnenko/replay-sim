@@ -1,4 +1,11 @@
-"""Trace-driven discrete-event simulator of a vLLM-style engine. v0.2
+"""Trace-driven discrete-event simulator of a vLLM-style engine. v0.6
+
+v0.6: decode-generated full blocks are published to the prefix cache with
+unique content (vLLM caches all full blocks). They earn no hits on this
+workload but consume cache capacity, so eviction pressure persists to
+larger pools -- the mechanism behind run 5 config H.
+
+History: v0.2
 
 v0.2 changes, driven by the 2026-08-27 validation run (see REPORT.md):
   1. Prefix-cache blocks are published as prefill computes them, not on
@@ -34,10 +41,10 @@ class Perf:
     def load(cls, path):
         """Load the four coefficients, ignoring provenance metadata.
 
-        run 4: perf.json now also carries "a_source"/"note"/"online_fit" so a
-        hybrid fit (online `a`, offline b_p/b_d/c_kv) is self-describing. This
-        loader change is the only edit to simulator.py since v0.3 and touches
-        no physics -- the step model below is byte-identical to v0.3.
+        Re-applied on top of the v0.6 drop-in, which reverted it. perf.json has
+        carried "a_source"/"bp_source"/"note"/"online_fit" since run 4 and the
+        plain loader raises TypeError on them. No physics touched -- the v0.6
+        step model and cache logic below are exactly as delivered.
         """
         with open(path) as f:
             d = json.load(f)
@@ -64,6 +71,7 @@ class Req:
     cached: int = 0            # reused prompt tokens (token-level)
     alloc: int = 0             # non-cache blocks owned (tail + decode)
     inserted: int = 0          # how many full prompt blocks published
+    gen_inserted: int = 0      # full sequence blocks published beyond prompt
     pinned: list = field(default_factory=list)   # hashes this req pins
     ttft: float = -1.0
     finish: float = -1.0
@@ -187,6 +195,7 @@ def simulate(trace, cfg: Cfg, perf: Perf):
         v.generated = 0
         v.cached = 0
         v.inserted = 0
+        v.gen_inserted = 0
         v.preemptions += 1
         preempt_total += 1
         running.remove(v)
@@ -283,6 +292,19 @@ def simulate(trace, cfg: Cfg, perf: Perf):
             if r.generated == 0 and r.ttft < 0:
                 r.ttft = t - r.arrival
             r.generated += 1
+            # v0.6: publish full sequence blocks produced by decode. Content
+            # is unique per request (generated text), so these never match,
+            # but they occupy cache capacity exactly as in vLLM.
+            if cfg.prefix_caching:
+                total_full = (r.prompt_len + r.generated) // bs
+                start = max(len(r.hashes), r.gen_inserted or len(r.hashes))
+                while start < total_full:
+                    gh = f"g{r.rid}-{start}"
+                    if cache.publish(gh):
+                        r.alloc = max(0, r.alloc - 1)
+                        r.pinned.append(gh)
+                    start += 1
+                r.gen_inserted = total_full
             if r.generated >= r.output_len:
                 r.finish = t
                 finished.append(r)

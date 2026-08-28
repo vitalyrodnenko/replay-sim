@@ -29,6 +29,8 @@ case "$cfg" in
   # point and is still above every utilisation used in runs 1-4 (max 0.85).
   H)      GMU="${2:-0.88}"; MBT=2048; PC="--enable-prefix-caching" ;;
   I)      GMU="${2:-0.78}"; MBT=8192; PC="--enable-prefix-caching" ;;
+  # run 6 held-out config: an unseen pool point between F (0.78) and A (0.85).
+  J)      GMU="${2:-0.82}"; MBT=2048; PC="--enable-prefix-caching" ;;
   *) echo "unknown config: $cfg" >&2; exit 1 ;;
 esac
 

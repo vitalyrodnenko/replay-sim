@@ -175,18 +175,38 @@ Rules:
 3. Every report shows both counts (v1 and v2) for the full series.
 4. Further changes only between rounds, in writing, with motivation.
 
-# Run 5 protocol notes
+# v0.6 changelog (2026-08-28, after validation run 5)
 
-- Calibration: complete the online refit. b_d and c_kv move to the
-  online steady-state-window method used for `a` in run 4, sweeping
-  batch AND context; b_p is refit online from the same harness if it
-  covers prefill, otherwise it stays offline and perf.json says so.
-  B=16/ctx=3072 stays held out of the fit and its error is reported as
-  the calibration's own held-out test.
-- A-G are all development data. Run 5 held-out configs, measurements
-  not yet in existence:
-    H: gpu-mem-util 0.93, max-num-seqs 128, mbt 2048  (unseen pool point)
-    I: gpu-mem-util 0.78, mbt 8192                    (crossed axes:
-       pool pressure x prefill granularity, never tested jointly)
-- Predict H, I and A-G, commit, freeze, then run H and I for real.
-- Use --drop-first 10 on BOTH bench.py and simulator.py, same N.
+Single change: decode-generated full blocks are published to the prefix
+cache with unique content, matching vLLM's actual behavior (it caches
+every full block of a sequence, not only prompt blocks). On this
+workload they earn zero hits but consume cache capacity, so eviction
+pressure persists to larger pools. Directional check: sim hit rate now
+responds to pool size near saturation (0.808/0.847/0.862 at
+4607/5450/5811 blocks; was flat 0.862 at the top two), reproducing the
+run-5 config-H mechanism.
+
+# Run 6 protocol
+
+- Criterion v2 (adopted between runs 4 and 5) carries the verdict;
+  report both counts for series continuity.
+- Held-out: J = gpu-mem-util 0.82, mns 128, mbt 2048. Probe its pool
+  from its own startup log. One fresh real run (J); A-I reals reused
+  from runs 3 and 5, labeled in-sample re-predictions.
+- Pre-registered predictions to freeze before simulating:
+  (i)  sim hit rate differs between A and H pools (5,450 vs 5,811),
+       with sim A moving toward real A's 0.855-0.856;
+  (ii) H ttft_p95 over-prediction shrinks and the H row passes v2;
+  (iii) J passes v2 on all six rows;
+  (iv) cost scorecard unchanged within noise (every cost gap <= 3 pt);
+  (v)  F and G ttft_p95 absolute errors shrink (they sit in the same
+       cache-saturation zone) -- record even if they stay misses.
+
+> NOTE on this drop-in (run 6). The v0.6 archive's README does not carry
+> VERDICT CRITERION v2, which was adopted in writing between runs 4 and 5 and
+> which the Run 6 protocol above depends on ("Criterion v2 ... carries the
+> verdict"). The criterion is preserved verbatim above rather than dropped.
+> The archive also shipped a pre-run-4 calibrate.py and the pristine pre-fix
+> workload.py for the third time; neither was copied. simulator.py was taken
+> from the archive as delivered, with only Perf.load's provenance-key tolerance
+> re-applied so it can read the v0.5 perf.json at all.
