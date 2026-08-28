@@ -1,0 +1,66 @@
+== ABSOLUTE (sim vs real) ==
+-- config A
+   ttft_p50_s               sim=     0.236 real=     0.246  err=-4.1%
+   ttft_p95_s               sim=     0.703 real=     0.642  err=+9.5%
+   e2e_p50_s                sim=     4.681 real=     4.842  err=-3.3%
+   e2e_p95_s                sim=     6.664 real=     7.534  err=-11.5%
+   throughput_tok_s         sim=     209.1 real=     207.7  err=+0.7%
+   prefix_cache_hit_rate    sim=     0.862 real=     0.855  err=+0.8%
+-- config B
+   ttft_p50_s               sim=    50.199 real=    55.653  err=-9.8%
+   ttft_p95_s               sim=   132.853 real=   148.261  err=-10.4%
+   e2e_p50_s                sim=    88.634 real=    96.561  err=-8.2%
+   e2e_p95_s                sim=   157.494 real=   174.225  err=-9.6%
+   throughput_tok_s         sim=     110.5 real=     104.6  err=+5.6%
+-- config C
+   ttft_p50_s               sim=     1.301 real=     1.407  err=-7.5%
+   ttft_p95_s               sim=    24.852 real=    27.857  err=-10.8%
+   e2e_p50_s                sim=    12.392 real=    14.747  err=-16.0%
+   e2e_p95_s                sim=     40.45 real=    42.663  err=-5.2%
+   throughput_tok_s         sim=     171.8 real=     171.2  err=+0.4%
+   prefix_cache_hit_rate    sim=     0.596 real=     0.597  err=-0.2%
+-- config D
+   ttft_p50_s               sim=     0.236 real=     0.247  err=-4.5%
+   ttft_p95_s               sim=     0.703 real=     0.583  err=+20.6%
+   e2e_p50_s                sim=     4.681 real=     4.791  err=-2.3%
+   e2e_p95_s                sim=     6.664 real=     7.221  err=-7.7%
+   throughput_tok_s         sim=     209.1 real=     208.7  err=+0.2%
+   prefix_cache_hit_rate    sim=     0.862 real=     0.859  err=+0.3%
+-- config E
+   ttft_p50_s               sim=     0.324 real=     0.326  err=-0.6%
+   ttft_p95_s               sim=     3.608 real=      3.19  err=+13.1%
+   e2e_p50_s                sim=     5.331 real=     6.024  err=-11.5%
+   e2e_p95_s                sim=    16.254 real=    20.848  err=-22.0%
+   throughput_tok_s         sim=     200.8 real=     199.6  err=+0.6%
+   prefix_cache_hit_rate    sim=     0.739 real=     0.726  err=+1.8%
+
+== CONFIG-CHANGE EFFECT (vs config A ) ==
+-- B vs A
+   ttft_p50_s               sim +21170.8%  real +22523.2%  gap 1352.4pt  MISS
+   ttft_p95_s               sim +18798.0%  real +22993.6%  gap 4195.6pt  MISS
+   e2e_p50_s                sim +1793.5%  real +1894.2%  gap 100.8pt  MISS
+   e2e_p95_s                sim +2263.4%  real +2212.5%  gap  50.8pt  MISS
+   throughput_tok_s         sim   -47.2%  real   -49.6%  gap   2.5pt  OK 
+-- C vs A
+   ttft_p50_s               sim  +451.3%  real  +472.0%  gap  20.7pt  MISS
+   ttft_p95_s               sim +3435.1%  real +4239.1%  gap 804.0pt  MISS
+   e2e_p50_s                sim  +164.7%  real  +204.6%  gap  39.8pt  MISS
+   e2e_p95_s                sim  +507.0%  real  +466.3%  gap  40.7pt  MISS
+   throughput_tok_s         sim   -17.8%  real   -17.6%  gap   0.3pt  OK 
+   prefix_cache_hit_rate    sim   -30.9%  real   -30.2%  gap   0.7pt  OK 
+-- D vs A
+   ttft_p50_s               sim    +0.0%  real    +0.4%  gap   0.4pt  OK 
+   ttft_p95_s               sim    +0.0%  real    -9.2%  gap   9.2pt  OK 
+   e2e_p50_s                sim    +0.0%  real    -1.1%  gap   1.1pt  OK 
+   e2e_p95_s                sim    +0.0%  real    -4.2%  gap   4.2pt  OK 
+   throughput_tok_s         sim    +0.0%  real    +0.5%  gap   0.5pt  OK 
+   prefix_cache_hit_rate    sim    +0.0%  real    +0.5%  gap   0.5pt  OK 
+-- E vs A
+   ttft_p50_s               sim   +37.3%  real   +32.5%  gap   4.8pt  OK 
+   ttft_p95_s               sim  +413.2%  real  +396.9%  gap  16.3pt  MISS
+   e2e_p50_s                sim   +13.9%  real   +24.4%  gap  10.5pt  OK 
+   e2e_p95_s                sim  +143.9%  real  +176.7%  gap  32.8pt  MISS
+   throughput_tok_s         sim    -4.0%  real    -3.9%  gap   0.1pt  OK 
+   prefix_cache_hit_rate    sim   -14.3%  real   -15.1%  gap   0.8pt  OK 
+
+VERDICT: FAIL (tighten the model, see MISS rows)

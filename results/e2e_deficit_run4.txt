@@ -1,0 +1,13 @@
+== residual e2e_p50 deficit per output token (low-queue configs) ==
+run 3 measured 5.56 +/- 0.43 ms/token against the v0.3 model.
+
+cfg  v0.3 sim  v0.4 sim     real v0.3 deficit v0.4 deficit  v0.3 ms/tok  v0.4 ms/tok
+  A     3.822     4.681    4.842       1.020s       0.161s         5.48         0.87
+  D     3.822     4.681    4.791       0.969s       0.110s         5.21         0.59
+  F     3.878     4.724    5.028       1.150s       0.304s         6.18         1.63
+  G     3.859     4.716    4.854       0.995s       0.138s         5.35         0.74
+
+mean ms/output-token: v0.3 5.56 (sd 0.37)  ->  v0.4 0.96 (sd 0.40)
+`a` was raised by 3.176 ms/step; the measured deficit fell by 4.60 ms/output-token.
+
+remaining deficit as a share of the run-3 figure: 17%

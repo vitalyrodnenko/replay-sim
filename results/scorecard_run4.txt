@@ -1,0 +1,101 @@
+== 1. e2e ABSOLUTE ERROR: v0.3 -> v0.4 ==
+cfg     metric      real  v0.3 sim      err  v0.4 sim      err   toward zero?
+  A  e2e_p50_s     4.842     3.822   -21.1%     4.681    -3.3%   YES
+  A  e2e_p95_s     7.534     5.601   -25.7%     6.664   -11.5%   YES
+  B  e2e_p50_s    96.561    86.675   -10.2%    88.634    -8.2%   YES
+  B  e2e_p95_s   174.225   153.258   -12.0%   157.494    -9.6%   YES
+  C  e2e_p50_s    14.747     9.372   -36.4%    12.392   -16.0%   YES
+  C  e2e_p95_s    42.663    42.343    -0.8%    40.450    -5.2%   no
+  D  e2e_p50_s     4.791     3.822   -20.2%     4.681    -2.3%   YES
+  D  e2e_p95_s     7.221     5.601   -22.4%     6.664    -7.7%   YES
+  E  e2e_p50_s     6.024     4.195   -30.4%     5.331   -11.5%   YES
+  E  e2e_p95_s    20.848    12.192   -41.5%    16.254   -22.0%   YES
+  F  e2e_p50_s     5.028     3.878   -22.9%     4.724    -6.0%   YES
+  F  e2e_p95_s     9.260     7.123   -23.1%     8.537    -7.8%   YES
+  G  e2e_p50_s     4.854     3.859   -20.5%     4.716    -2.8%   YES
+  G  e2e_p95_s     7.901     5.611   -29.0%     6.672   -15.6%   YES
+
+PRIMARY mean |e2e err| (n=14): v0.3 22.58%  ->  v0.4 9.26%
+SUBSET  mean |e2e err| A,D,E (n=6): v0.3 26.88%  ->  v0.4 9.74%
+rows moved toward zero: 13 of 14
+rows still under-predicted: 14 of 14
+
+== 2. COST METRICS: v0.3 -> v0.4 ==
+cfg                 metric      real  v0.3 err  v0.4 err
+  A       throughput_tok_s   207.700     +1.1%     +0.7%
+  A   gpu_s_per_1k_out_tok (derived)     4.521     4.628
+  A  prefix_cache_hit_rate     0.855     +0.8%     +0.8%
+  B       throughput_tok_s   104.600     +7.4%     +5.6%
+  B   gpu_s_per_1k_out_tok (derived)     8.890     9.032
+  B  prefix_cache_hit_rate       n/a
+  C       throughput_tok_s   171.200     -0.3%     +0.4%
+  C   gpu_s_per_1k_out_tok (derived)     5.724     5.721
+  C  prefix_cache_hit_rate     0.597     -0.5%     -0.2%
+  D       throughput_tok_s   208.700     +0.6%     +0.2%
+  D   gpu_s_per_1k_out_tok (derived)     4.521     4.628
+  D  prefix_cache_hit_rate     0.859     +0.3%     +0.3%
+  E       throughput_tok_s   199.600     +1.2%     +0.6%
+  E   gpu_s_per_1k_out_tok (derived)     4.791     4.880
+  E  prefix_cache_hit_rate     0.726     +2.8%     +1.8%
+  F       throughput_tok_s   201.300     +1.1%     +0.6%
+  F   gpu_s_per_1k_out_tok (derived)     4.671     4.784
+  F  prefix_cache_hit_rate     0.812     +3.2%     +3.2%
+  G       throughput_tok_s   204.400     +1.8%     +1.4%
+  G   gpu_s_per_1k_out_tok (derived)     4.562     4.669
+  G  prefix_cache_hit_rate     0.844     +1.5%     +1.5%
+
+== 3. DELTA GAPS vs A (15-pt bar): v0.3 -> v0.4 ==
+cfg                 metric  v0.3 gap  v0.4 gap  v0.3  v0.4
+  B             ttft_p50_s   1352.9   1352.4  MISS  MISS
+  B             ttft_p95_s   3850.2   4195.6  MISS  MISS
+  B              e2e_p50_s    273.6    100.8  MISS  MISS
+  B              e2e_p95_s    423.7     50.8  MISS  MISS
+  B       throughput_tok_s      3.1      2.5  OK   OK 
+  C             ttft_p50_s     14.1     20.7  OK   MISS
+  C             ttft_p95_s    244.3    804.0  MISS  MISS
+  C              e2e_p50_s     59.4     39.8  MISS  MISS
+  C              e2e_p95_s    189.7     40.7  MISS  MISS
+  C       throughput_tok_s      1.1      0.3  OK   OK 
+  C  prefix_cache_hit_rate      0.9      0.7  OK   OK 
+  D             ttft_p50_s      0.4      0.4  OK   OK 
+  D             ttft_p95_s      9.2      9.2  OK   OK 
+  D              e2e_p50_s      1.1      1.1  OK   OK 
+  D              e2e_p95_s      4.2      4.2  OK   OK 
+  D       throughput_tok_s      0.5      0.5  OK   OK 
+  D  prefix_cache_hit_rate      0.5      0.5  OK   OK 
+  E             ttft_p50_s      0.6      4.8  OK   OK 
+  E             ttft_p95_s      9.8     16.3  OK   MISS
+  E              e2e_p50_s     14.7     10.5  OK   OK 
+  E              e2e_p95_s     59.0     32.8  MISS  MISS
+  E       throughput_tok_s      0.1      0.1  OK   OK 
+  E  prefix_cache_hit_rate      1.6      0.8  OK   OK 
+  F             ttft_p50_s      2.4      1.6  OK   OK 
+  F             ttft_p95_s     71.8     77.0  MISS  MISS
+  F              e2e_p50_s      2.4      2.9  OK   OK 
+  F              e2e_p95_s      4.3      5.2  OK   OK 
+  F       throughput_tok_s      0.0      0.1  OK   OK 
+  F  prefix_cache_hit_rate      2.2      2.2  OK   OK 
+  G             ttft_p50_s      0.8      0.8  OK   OK 
+  G             ttft_p95_s     22.4     22.9  MISS  MISS
+  G              e2e_p50_s      0.7      0.5  OK   OK 
+  G              e2e_p95_s      4.7      4.8  OK   OK 
+  G       throughput_tok_s      0.7      0.7  OK   OK 
+  G  prefix_cache_hit_rate      0.7      0.7  OK   OK 
+
+rows within bar: v0.3 25/35   v0.4 23/35
+
+== 4. HELD-OUT-IN-RUN-3 SUBSET (F, G) ==
+  F             ttft_p50_s v0.3 gap     2.4 OK    v0.4 gap     1.6 OK 
+  F             ttft_p95_s v0.3 gap    71.8 MISS   v0.4 gap    77.0 MISS
+  F              e2e_p50_s v0.3 gap     2.4 OK    v0.4 gap     2.9 OK 
+  F              e2e_p95_s v0.3 gap     4.3 OK    v0.4 gap     5.2 OK 
+  F       throughput_tok_s v0.3 gap     0.0 OK    v0.4 gap     0.1 OK 
+  F  prefix_cache_hit_rate v0.3 gap     2.2 OK    v0.4 gap     2.2 OK 
+  G             ttft_p50_s v0.3 gap     0.8 OK    v0.4 gap     0.8 OK 
+  G             ttft_p95_s v0.3 gap    22.4 MISS   v0.4 gap    22.9 MISS
+  G              e2e_p50_s v0.3 gap     0.7 OK    v0.4 gap     0.5 OK 
+  G              e2e_p95_s v0.3 gap     4.7 OK    v0.4 gap     4.8 OK 
+  G       throughput_tok_s v0.3 gap     0.7 OK    v0.4 gap     0.7 OK 
+  G  prefix_cache_hit_rate v0.3 gap     0.7 OK    v0.4 gap     0.7 OK 
+
+F/G rows within bar: v0.3 10/12   v0.4 10/12

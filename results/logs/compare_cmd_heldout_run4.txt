@@ -1,0 +1,1 @@
+.venv/bin/python -m replay_sim.compare --sim results/sim_A_v04_run4.json results/sim_F_v04_run4.json results/sim_G_v04_run4.json --real results/real_A.json results/real_F.json results/real_G.json --labels A F G
