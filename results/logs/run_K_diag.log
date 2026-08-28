@@ -1,0 +1,9 @@
+=== [K diag] stopping anything running ===
+stopped; VRAM in use: 255 MiB; compute apps: 0
+=== [K diag] starting server ===
+started config K (gpu-mem-util=0.75, max-num-batched-tokens=2048, --enable-prefix-caching) pid=83562
+READY after 35s
+GPU KV cache size: 67,936 tokens
+=== [K diag] running bench.py --per-request ===
+[K diag] bench exit=0
+stopped; VRAM in use: 255 MiB; compute apps: 0

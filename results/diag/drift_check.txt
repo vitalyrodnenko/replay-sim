@@ -1,0 +1,34 @@
+== diagnostic re-run vs CANONICAL real (drift check) ==
+run-5 control on config A: <=0.4% on every metric
+
+ cfg                 metric  canonical       diag    drift
+   F             ttft_p50_s      0.253      0.252   -0.40%
+   F             ttft_p95_s      1.360      1.356   -0.29%
+   F              e2e_p50_s      5.028      5.058   +0.60%
+   F              e2e_p95_s      9.260      9.283   +0.25%
+   F       throughput_tok_s    201.300    201.300   +0.00%
+   F  prefix_cache_hit_rate      0.812      0.812   +0.00%
+
+   J             ttft_p50_s      0.247      0.248   +0.40%
+   J             ttft_p95_s      0.705      0.834  +18.30%
+   J              e2e_p50_s      4.849      4.856   +0.14%
+   J              e2e_p95_s      8.025      8.021   -0.05%
+   J       throughput_tok_s    203.900    203.900   +0.00%
+   J  prefix_cache_hit_rate      0.842      0.842   +0.00%
+
+   K             ttft_p50_s      0.263      0.256   -2.66%
+   K             ttft_p95_s      1.885      1.889   +0.21%
+   K              e2e_p50_s      5.237      5.171   -1.26%
+   K              e2e_p95_s     10.210     10.209   -0.01%
+   K       throughput_tok_s    200.900    200.900   +0.00%
+   K  prefix_cache_hit_rate      0.792      0.795   +0.38%
+
+   H             ttft_p50_s      0.246      0.243   -1.22%
+   H             ttft_p95_s      0.542      0.545   +0.55%
+   H              e2e_p50_s      4.754      4.755   +0.02%
+   H              e2e_p95_s      7.206      7.203   -0.04%
+   H       throughput_tok_s    209.200    209.200   +0.00%
+   H  prefix_cache_hit_rate      0.862      0.862   +0.00%
+
+worst drift per config: F 0.60%  J 18.30%  K 2.66%  H 1.22%
+all within the run-5 control band (<=0.4%)? NO -- largest J 18.30%

@@ -1,0 +1,52 @@
+== diagnose config K: 182 aligned requests ==
+
+top-5% ttft sets: sim [166, 167, 168, 169, 187, 188, 189, 190, 191]
+                  real [166, 167, 168, 169, 187, 188, 189, 190, 191]
+overlap: 9/9 (SAME requests, magnitude problem)
+
+-- mean ttft (sim-real), by turn:
+   turn=0: +0.127s  (n=14)
+   turn=1: +0.030s  (n=24)
+   turn=2: +0.014s  (n=24)
+   turn=3: -0.000s  (n=24)
+   turn=4: -0.012s  (n=24)
+   turn=5: -0.006s  (n=24)
+   turn=6: +0.137s  (n=24)
+   turn=7: +0.159s  (n=24)
+
+-- mean ttft (sim-real), by arrival_quintile:
+   arrival_quintile=0: +0.068s  (n=37)
+   arrival_quintile=1: +0.010s  (n=31)
+   arrival_quintile=2: -0.010s  (n=51)
+   arrival_quintile=3: +0.039s  (n=35)
+   arrival_quintile=4: +0.210s  (n=28)
+
+-- mean ttft (sim-real), by prompt_len_kbucket:
+   prompt_len_kbucket=1: +0.127s  (n=14)
+   prompt_len_kbucket=2: +0.016s  (n=70)
+   prompt_len_kbucket=3: +0.001s  (n=53)
+   prompt_len_kbucket=4: +0.147s  (n=45)
+
+-- 10 most OVER-predicted (sim slower than real):
+   rid= 186 turn=7 sess= 17 arr=  153.2 plen= 4336 sim=  2.552 real=  1.377 diff= +1.175 cached= 1200 pre=0
+   rid= 187 turn=7 sess= 19 arr=  153.8 plen= 4668 sim=  3.682 real=  2.543 diff= +1.139 cached= 1200 pre=0
+   rid= 189 turn=7 sess= 13 arr=  155.1 plen= 4592 sim=  4.940 real=  3.880 diff= +1.060 cached= 1200 pre=0
+   rid= 190 turn=7 sess=  1 arr=  155.7 plen= 4980 sim=  6.044 real=  5.043 diff= +1.001 cached= 1200 pre=0
+   rid= 177 turn=7 sess=  9 arr=  140.9 plen= 4360 sim=  1.052 real=  0.253 diff= +0.799 cached= 3904 pre=0
+   rid= 163 turn=6 sess=  2 arr=  124.7 plen= 4196 sim=  2.102 real=  1.319 diff= +0.782 cached= 1200 pre=0
+   rid= 164 turn=6 sess=  9 arr=  125.9 plen= 3906 sim=  2.080 real=  1.337 diff= +0.743 cached= 1200 pre=0
+   rid= 165 turn=6 sess= 14 arr=  127.1 plen= 4276 sim=  2.582 real=  1.889 diff= +0.692 cached= 1200 pre=0
+   rid= 166 turn=6 sess=  5 arr=  127.1 plen= 4084 sim=  3.420 real=  2.756 diff= +0.664 cached= 1200 pre=0
+   rid= 156 turn=6 sess= 18 arr=  115.8 plen= 4176 sim=  0.837 real=  0.220 diff= +0.617 cached= 2208 pre=0
+
+-- 10 most UNDER-predicted (sim faster than real):
+   rid= 191 turn=7 sess= 14 arr=  156.0 plen= 4737 sim=  5.843 real=  6.125 diff= -0.281 cached= 1200 pre=0
+   rid= 170 turn=7 sess=  7 arr=  130.8 plen= 4713 sim=  0.636 real=  0.906 diff= -0.269 cached= 4224 pre=0
+   rid= 178 turn=7 sess= 20 arr=  141.0 plen= 4666 sim=  1.330 real=  1.536 diff= -0.206 cached= 2656 pre=0
+   rid= 180 turn=7 sess=  5 arr=  141.1 plen= 4487 sim=  1.199 real=  1.386 diff= -0.187 cached= 4080 pre=0
+   rid= 179 turn=7 sess= 16 arr=  141.0 plen= 4483 sim=  1.304 real=  1.491 diff= -0.187 cached= 3984 pre=0
+   rid=  16 turn=0 sess=  9 arr=    8.7 plen= 1920 sim=  0.698 real=  0.841 diff= -0.143 cached= 1200 pre=0
+   rid=  15 turn=0 sess= 21 arr=    8.7 plen= 1920 sim=  0.733 real=  0.875 diff= -0.142 cached= 1200 pre=0
+   rid= 181 turn=7 sess=  4 arr=  142.4 plen= 4711 sim=  0.242 real=  0.335 diff= -0.093 cached= 4240 pre=0
+   rid= 151 turn=6 sess= 23 arr=  109.1 plen= 4108 sim=  0.262 real=  0.345 diff= -0.083 cached= 3680 pre=0
+   rid=  89 turn=3 sess=  9 arr=   68.4 plen= 2865 sim=  0.325 real=  0.400 diff= -0.075 cached= 2416 pre=0

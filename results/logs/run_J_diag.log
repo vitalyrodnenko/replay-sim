@@ -1,0 +1,9 @@
+=== [J diag] stopping anything running ===
+stopped; VRAM in use: 255 MiB; compute apps: 0
+=== [J diag] starting server ===
+started config J (gpu-mem-util=0.82, max-num-batched-tokens=2048, --enable-prefix-caching) pid=82837
+READY after 35s
+GPU KV cache size: 81,424 tokens
+=== [J diag] running bench.py --per-request ===
+[J diag] bench exit=0
+stopped; VRAM in use: 255 MiB; compute apps: 0

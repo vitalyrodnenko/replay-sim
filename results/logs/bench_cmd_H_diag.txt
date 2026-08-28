@@ -1,0 +1,1 @@
+python -m replay_sim.bench --trace results/trace.jsonl --model Qwen/Qwen3-32B-AWQ --drop-first 10 --per-request results/diag/realpr_H.jsonl --out results/diag/real_H_diag.json
