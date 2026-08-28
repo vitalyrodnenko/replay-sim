@@ -1,0 +1,1 @@
+source .venv/bin/activate; source scripts/env.sh; python -m replay_sim.calibrate --model Qwen/Qwen3-32B-AWQ --tp 2 --gpu-mem-util 0.85 --out results/perf.json
