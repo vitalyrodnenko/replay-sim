@@ -239,11 +239,17 @@ summary: this run bought correctness of construction, not a better number.
 
 ## 7. In-sample A–G (development data, proves nothing)
 
-**v1 26 of 35 · v2 33 of 35.** The two rows that fail under both are E `e2e_p95`
-(−16.9% absolute) and C `e2e_p50` (17.1 pt / −7.2%… passes v2) — precisely, the v2
-failures are E `e2e_p95` and D `ttft_p95`. Seven rows pass under v2 but not v1, all
-of them B and C rows whose gaps run from 17 to 2,204 points while their absolute
-errors sit between 6.4% and 11.5%.
+**v1 26 of 35 · v2 33 of 35.** Seven rows pass under v2 but not v1 — four B rows,
+two C rows and E `ttft_p95` — with gaps from 17 to 2,204 points against absolute
+errors of 6.4% to 11.5%. That is the small-baseline amplification, priced correctly.
+
+**The two rows that fail under both are F `ttft_p95` (−31.3% absolute) and G
+`ttft_p95` (−15.9%)** — the same two rows that were held out and missed in run 3,
+still missing under v0.5. This matters for §5. Config I, built to combine F's and
+G's mechanisms, passes v2 at −10.6%, while F and G individually still fail. So the
+tail defect is **not** the crossing of pool pressure and prefill granularity, and it
+is not fixed by better coefficients. G is a new v2 casualty: it passed v2 under v0.4
+at −9.9% and fails under v0.5 at −15.9%, just over the line.
 
 ---
 
@@ -318,10 +324,13 @@ Ranked next steps:
    an identical tail for 5,450 and 5,811 blocks; the real engine improves both. The
    cache model stops responding to pool size well before the real one does. This is
    the only held-out v2 miss in run 5 and the first over-prediction in the series.
-2. **Retire or re-test the queue-build-up hypothesis.** I was its direct test and it
-   passed at −10.6%. Either the mechanism is smaller than run 3 §7.2 argued, or F's
-   `ttft_p95` (still −30% absolute in run 4) has a different cause. Re-run F under
-   v0.5 coefficients before assuming either.
+2. **The queue-build-up hypothesis is now contradicted by its own test.** I combines
+   both of its mechanisms and passes v2 at −10.6%, while F (−31.3%) and G (−15.9%)
+   still fail under v0.5 — measured this run, §7. A hypothesis whose combined case
+   passes while both single cases fail is the wrong hypothesis. What F, G and H have
+   in common and I does not is worth the next held-out design: all three sit at or
+   near a pool where the cache is saturated in the model but not in the engine, which
+   is the same defect as item 1.
 3. **Model the startup ceiling.** The simulator will happily predict a config the
    server cannot boot. A calibrated maximum utilisation, recorded per box, would
    turn "0.93 gives you N blocks" into "0.93 does not start here".
