@@ -12,9 +12,9 @@
   "block_lookup_hit_rate": 0.994,
   "preemptions": 0,
   "config": {
-    "num_blocks": 5450,
+    "num_blocks": 5176,
     "block_size": 16,
-    "max_num_seqs": 128,
+    "max_num_seqs": 32,
     "max_batched_tokens": 2048,
     "prefix_caching": true
   }

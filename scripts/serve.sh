@@ -7,16 +7,19 @@ MODEL="${MODEL:-Qwen/Qwen3-32B-AWQ}"
 VENV="$(pwd)/.venv/bin"
 export PATH="$VENV:$PATH"
 source "$(pwd)/scripts/env.sh"
+MNS=128
 case "$cfg" in
   A)      GMU="${2:-0.90}"; MBT=2048; PC="--enable-prefix-caching" ;;
   B)      GMU="${2:-0.90}"; MBT=2048; PC="--no-enable-prefix-caching" ;;
   Bprime) GMU="${2:-0.90}"; MBT=8192; PC="--enable-prefix-caching" ;;
   C)      GMU="${2:-0.60}"; MBT=2048; PC="--enable-prefix-caching" ;;
+  D)      GMU="${2:-0.85}"; MBT=2048; PC="--enable-prefix-caching"; MNS=32 ;;
+  E)      GMU="${2:-0.70}"; MBT=2048; PC="--enable-prefix-caching" ;;
   *) echo "unknown config: $cfg" >&2; exit 1 ;;
 esac
 
 CMD="$VENV/vllm serve $MODEL --port 8000 --tensor-parallel-size 2 \
---max-model-len 8192 --max-num-seqs 128 \
+--max-model-len 8192 --max-num-seqs $MNS \
 --gpu-memory-utilization $GMU --max-num-batched-tokens $MBT $PC"
 
 log="results/logs/server_${cfg}.log"

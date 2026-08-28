@@ -29,7 +29,7 @@ bash scripts/nvsample.sh "results/logs/nvidia_smi_${cfg}.csv" 5 &
 nvpid=$!
 
 echo "=== [$cfg] running bench.py ==="
-benchcmd="python -m replay_sim.bench --trace results/trace.jsonl --model $MODEL --out results/real_${cfg}.json"
+benchcmd="python -m replay_sim.bench --trace results/trace.jsonl --model $MODEL --drop-first 10 --out results/real_${cfg}.json"
 echo "$benchcmd" > "results/logs/bench_cmd_${cfg}.txt"
 $benchcmd > "results/logs/bench_${cfg}.log" 2>&1
 rc=$?
