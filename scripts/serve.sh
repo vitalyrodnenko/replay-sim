@@ -3,7 +3,7 @@
 # usage: serve.sh <A|B|Bprime|C> [gpu_mem_util_override]
 set -u
 cfg="$1"
-MODEL="${MODEL:-Qwen/Qwen3.8-27B-FP8}"
+MODEL="${MODEL:-Qwen/Qwen3-32B-AWQ}"
 VENV="$(pwd)/.venv/bin"
 export PATH="$VENV:$PATH"
 source "$(pwd)/scripts/env.sh"

@@ -7,3 +7,11 @@ export PATH="$(pwd)/.venv/bin:$PATH"
 # this box. Use vLLM's PyTorch-native top-k/top-p sampler instead. The bench
 # runs greedy (temperature=0.0) and this is identical across A/B/C.
 export VLLM_USE_FLASHINFER_SAMPLER=0
+
+# vLLM's KV budget does not cover CUDA-graph private pools or non-torch
+# allocations (NCCL/CUDA context), so the process overshoots its own
+# gpu-memory-utilization target and large decode batches hit fragmentation
+# (504 MiB reserved-but-unallocated with only 48 MiB free). This is an
+# allocator setting, not an engine parameter, and is applied identically to
+# calibration and all three configs.
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
