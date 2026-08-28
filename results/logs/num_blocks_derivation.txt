@@ -1,0 +1,5 @@
+N_A derivation: server_A.log 'GPU KV cache size: 91,808 tokens' / block_size 16 = 5738 blocks
+N_C derivation: server_C.log 'GPU KV cache size: 39,040 tokens' / block_size 16 = 2440 blocks
+vLLM 0.28 reports KV capacity in tokens, not '# GPU blocks'. simulator Cfg.block_size=16,
+so num_blocks*16 reproduces the engine's exact token capacity (5738*16=91808, 2440*16=39040).
+config C sanity check: largest request = 4980 prompt + 187 output = 5167 tokens << 39040 pool -> no deadlock, C@0.60 kept

@@ -1,0 +1,8 @@
+prefix-cache verification, config A (--enable-prefix-caching)
+before: queries=0.0 hits=0.0
+after req session0/turn0 (prompt_len=1920): queries=1920.0 hits=0.0
+after req session0/turn1 (prompt_len=2180): queries=4100.0 hits=1920.0
+after req session0/turn2 (prompt_len=2521): queries=6621.0 hits=4096.0
+
+final: queries=6621.0 hits=4096.0  hit_rate=0.6186
+VERDICT: prefix caching ACTIVE -> axis B is valid
