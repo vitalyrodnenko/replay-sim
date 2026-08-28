@@ -1,365 +1,392 @@
-# replay-sim v0.2 validation report — run 2
+# replay-sim v0.3 validation report — run 3
 
 **Date:** 2026-08-27
-**Verdict (held-out configs D and E):** **FAIL** — 9 of 12 rows within the 15-point bar.
-**Bottom line:** v0.2 is a large, real improvement — mean absolute error on the in-sample
-configs fell from **103.3% to 14.5%**, and the config-C sign error is gone. The scheduler
-axis (D) passes cleanly at 6/6. What still fails is **tail latency on the pool axis**, and
-one of the three failures is marginal (15.0 pt against a 15.0 pt bar).
+**Verdict (held-out configs F and G):** **FAIL** — **10 of 12** rows within the 15-point bar.
+**Bottom line:** the failure has collapsed to a single metric. Both remaining held-out
+misses are `ttft_p95`; every cost metric and every other SLA metric passes, most by a wide
+margin. And the run-2 hypothesis about `c_kv` was **wrong**: recovering it bought 1.0 point
+of e2e error, not the 20+ points I expected. The real cause of the e2e gap is now measured
+and is not in the simulator at all.
+
+| Run | Simulator | Held-out rows within bar |
+|---|---|---|
+| 1 | v0 | 1 of 11 |
+| 2 | v0.2 | 9 of 12 |
+| **3** | **v0.3** | **10 of 12** |
 
 ---
 
 ## 1. Environment
 
-Unchanged from run 1 except the simulator version. Full capture:
+Unchanged from runs 1–2 except the simulator and calibration. Full capture:
 `results/logs/environment.txt`.
 
 | | |
 |---|---|
-| GPUs | 2 × NVIDIA GeForce RTX 4090, 24,564 MiB each, compute capability 8.9 |
+| GPUs | 2 × RTX 4090, 24,564 MiB, compute capability 8.9 |
 | Driver / CUDA | 580.173.02 / CUDA 13.0 |
 | vLLM / torch / transformers | 0.28.0 / 2.13.0 / 5.16.1 |
-| Model | `Qwen/Qwen3-32B-AWQ`, snapshot `0499c3ac83fdef8810b907a23894ba91e95eddd8`, AWQ 4-bit, TP=2 |
-| Weights | 9.01 GiB per GPU |
-| Simulator | **v0.2** (commit `7e1d482`) |
-| Trace | unchanged from run 1, `sha256 4e70250f…` — 192 requests, 607,756 prompt tokens, 156 s span |
+| Model | `Qwen/Qwen3-32B-AWQ`, AWQ 4-bit, TP=2, 9.01 GiB/GPU |
+| Simulator | **v0.3** (commit `e5838dd`) |
+| Trace | unchanged, `sha256 4e70250f…` |
 
-GPU utilisation during the five runs: A 93.8%, B 98.4%, C 94.9%, D 93.8/93.1%, E 94.1%.
-All runs were GPU-bound.
+New warning observed this run, relevant to §7.3:
+`Custom allreduce is disabled because your platform lacks GPU P2P capability` — TP
+collectives cross PCIe host memory on this box.
 
-### v0.2 drop-in
+### v0.3 drop-in
 
-Only the four files named in the handoff were replaced: `simulator.py`, `calibrate.py`,
-`bench.py`, `README.md`. **`workload.py` was deliberately not replaced** — the archive
-ships the *pristine pre-fix* version with the `tok0..tok511` vocabulary, and copying it
-would have silently reverted the approved tokenizer fix and broken the provenance of the
-committed trace. Verified after the swap: `workload.py` still regenerates
-`results/trace.jsonl` byte-identically. `compare.py`, `RUNBOOK.md` and `__init__.py` in
-the archive were byte-identical to what was already present.
+Replaced only the three files named in the handoff: `calibrate.py`, `simulator.py`,
+`README.md`. **`workload.py` was again not replaced** — the archive ships the pristine
+pre-fix `tok0..tok511` version for the second time, and copying it would revert the
+tokenizer fix and break trace provenance. Verified after the swap: the trace still
+regenerates byte-identically. `bench.py`, `compare.py`, `RUNBOOK.md` and `__init__.py` in
+the archive were byte-identical to current.
 
 ---
 
-## 2. What was run
+## 2. Calibration gate
 
-1. **Recalibrated** — the decode grid changed, so `perf.json` was regenerated on the same
-   model and hardware and committed (`55de5f6`) before any prediction.
-2. **Predicted all five configs** with v0.2, KV capacity read from each config's own
-   server startup log. Committed at `43fe037`; **freeze absolute from that commit.**
-3. **Real runs, held-out first**: D, E, then A, B, C. Fresh server per config, readiness
-   polled on `/health`, `--drop-first 10` on every run.
-4. **Compared** — held-out (`results/compare_heldout.txt`) decides the verdict; in-sample
-   (`results/compare_insample.txt`) reported separately.
-
-### Recalibration, and one thing it broke
+The instruction was to stop before predicting if the `c_kv ≤ 0` warning fired. **It did
+not fire.** The redesigned grid identified the KV term:
 
 ```
-prefill  256/512/1024/2048/4096  ->  110.8 / 211.5 / 422.4 / 840.6 / 1718.4 ms
-decode B=1,8,32 ctx=512          ->  13.39 / 15.60 / 21.47 ms/step
-decode B=8 ctx=4096              ->  18.79 ms/step
-decode B=32 ctx=2048             ->  22.56 ms/step
-decode B=64/96 ctx=512           ->  31.49 / 46.30 ms/step      (new in v0.2)
-decode B=128 ctx=256             ->  58.39 ms/step              (new in v0.2)
+decode fit R² = 0.95147          c_kv = 0.01607
+
+B=8   ctx 512 / 2048 / 4096   ->  15.61 / 15.33 / 18.63 ms
+B=16  ctx 4096                ->  24.89 ms
+B=32  ctx 512 / 2048          ->  21.36 / 21.50 ms
+B=64  ctx 512 / 1024          ->  31.30 / 30.00 ms
+B=96  ctx 512                 ->  45.84 ms
+B=128 ctx 256                 ->  58.04 ms
 
             a          b_p          b_d          c_kv
-v0 run 1  0.014146   0.00041879   0.00018597   0.047886
-v0.2      0.012686   0.00041896   0.00034517   0.0
+v0  run 1  0.014146   0.00041879   0.00018597   0.047886
+v0.2 run 2 0.012686   0.00041896   0.00034517   0.0       (clamped, unidentified)
+v0.3 run 3 0.012935   0.00041897   0.00032273   0.01607   (identified)
 ```
 
-`b_d` nearly doubled, which is the intended effect — the saturated-batch points absorb the
-TP all-reduce cost v0 was missing.
-
-> **Finding, recorded before any prediction and not corrected: `c_kv` fitted to exactly
-> 0.0.** The three new large-batch/small-context points let batch size absorb all the
-> variance, the KV term fits negative, and `max(c_kv, 0.0)` clamps it away. **Decode step
-> time in v0.2 therefore has no context-length dependence at all** — even though the grid
-> itself shows some: at B=8, 15.60 ms at ctx 512 versus 18.79 ms at ctx 4096, implying a
-> c_kv near 0.111. Two grid points share kv = 32,768 with step times of 18.79 ms and
-> 58.39 ms, which is exactly what makes kv a poor regressor once batch dominates the
-> design. See §5.1 — this is the leading explanation for the one metric that got worse.
+**Caveat recorded before predicting, not corrected:** the context signal is weak and
+**non-monotonic in two of three fixed-batch pairs** — B=8 falls from 15.61 ms at ctx 512 to
+15.33 ms at ctx 2048, and B=64 falls from 31.30 ms at ctx 512 to 30.00 ms at ctx 1024.
+`c_kv` is positive and identified, but poorly conditioned, which is what R² = 0.951
+reflects against 0.9998 for the prefill fit. The grid decorrelated kv from batch well
+enough to clear the gate; it did not produce a strong context signal.
 
 ### Predicted-with N versus actually-run N
 
-KV capacity was probed per config before predicting; A and C were re-probed rather than
-reusing run 1's numbers, since `--max-num-seqs` changes CUDA-graph memory.
+Every config's KV capacity was probed from its own startup log before predicting.
 
-| Config | util | max-num-seqs | predicted-with N | run N | Match |
-|---|---|---|---|---|---|
-| A | 0.85 | 128 | 5,450 | 5,450 (87,200 tok) | ✅ exact |
-| B | 0.85 | 128 | 5,450 | 5,450 (87,200 tok) | ✅ exact |
-| C | 0.60 | 128 | 2,440 | 2,440 (39,040 tok) | ✅ exact |
-| **D** | 0.85 | **32** | **5,176** | **5,490 (87,840 tok)** | ❌ **+6.1%** |
-| E | 0.70 | 128 | 3,644 | 3,644 (58,304 tok) | ✅ exact |
+| Config | util | mns | mbt | probed N | run N | Match |
+|---|---|---|---|---|---|---|
+| A | 0.85 | 128 | 2048 | 5,450 | 5,450 | ✅ |
+| B | 0.85 | 128 | 2048 | 5,450 | 5,450 | ✅ |
+| C | 0.60 | 128 | 2048 | 2,440 | 2,440 | ✅ |
+| D | 0.85 | 32 | 2048 | 5,490 | 5,490 | ✅ |
+| E | 0.70 | 128 | 2048 | 3,644 | 3,644 | ✅ |
+| **F** | 0.78 | 128 | 2048 | **4,607** | 4,607 | ✅ |
+| **G** | 0.85 | 128 | **8192** | **5,106** | **5,141** | ❌ **+0.7%** |
 
-> **Finding, not corrected (freeze was absolute).** Config D's probe reported 82,816 KV
-> tokens; the actual run allocated **87,840**. This is the same non-deterministic pool
-> sizing documented in run 1 §5.2, now observed at 0.85 with `--max-num-seqs 32` — a
-> setting that was *deterministic* at `--max-num-seqs 128` (87,200 twice in run 1, 87,200
-> again here). D was therefore predicted against a pool 6.1% **smaller** than the one it
-> ran on.
+> **Finding, not corrected.** G ran on an 82,256-token pool against a predicted 81,696 —
+> the same non-deterministic vLLM sizing seen in runs 1 and 2, now at 0.7% rather than
+> 6.1%. Too small to move G's verdict, but recorded rather than quietly reconciled.
 >
-> Does it change the D verdict? No, and the reason is structural rather than lucky: v0.2
-> predicts D ≡ A because neither the pool nor the sequence cap binds at this trace's
-> concurrency. A pool 6.1% *larger* than predicted is even further from binding, so the
-> prediction's logic is unaffected. But the mismatch is real and is reported as found.
+> D's pool has settled: it probed at 87,840 this run, matching its run-2 *run* value
+> rather than its run-2 probe of 82,816.
 
 ---
 
-## 3. Held-out results — these decide the verdict
+## 3. Held-out results — the verdict
 
-Configs A/B/C are development data: v0.2 was designed while looking at their run-1
-results. Only D and E are held out.
+F (pool at an unseen 0.78) and G (chunked-prefill axis, never varied before) are the only
+held-out configs; A–E all informed v0.3's design.
 
-### D vs A — scheduler axis — **6 / 6 OK**
-
-v0.2 made an unusually sharp claim: `--max-num-seqs 32` changes **nothing**, predicting
-+0.0% on every metric. This was verified before the run to be a genuine prediction rather
-than a mis-parameterisation — the trace's concurrency never approaches 32, so the cap is
-inert. Measurement agreed.
+### F vs A — **5 / 6 OK**
 
 | Row | sim Δ | real Δ | gap | Verdict |
 |---|---|---|---|---|
-| ttft_p50_s | +0.0% | +0.0% | **0.0 pt** | ✅ OK |
-| ttft_p95_s | +0.0% | −7.2% | **7.2 pt** | ✅ OK |
-| e2e_p50_s | +0.0% | −0.7% | **0.7 pt** | ✅ OK |
-| e2e_p95_s | +0.0% | −4.2% | **4.2 pt** | ✅ OK |
-| throughput_tok_s | +0.0% | +0.4% | **0.4 pt** | ✅ OK |
-| prefix_cache_hit_rate | +0.0% | +0.4% | **0.4 pt** | ✅ OK |
+| ttft_p50_s | +0.4% | +2.8% | **2.4 pt** | ✅ OK |
+| ttft_p95_s | +40.0% | +111.8% | 71.8 pt | ❌ MISS |
+| e2e_p50_s | +1.5% | +3.8% | **2.4 pt** | ✅ OK |
+| e2e_p95_s | +27.2% | +22.9% | **4.3 pt** | ✅ OK |
+| throughput_tok_s | −3.0% | −3.1% | **0.0 pt** | ✅ OK |
+| prefix_cache_hit_rate | −2.8% | −5.0% | **2.2 pt** | ✅ OK |
 
-### E vs A — pool axis at an unseen point — **3 / 6 OK**
+### G vs A — **5 / 6 OK**
 
 | Row | sim Δ | real Δ | gap | Verdict |
 |---|---|---|---|---|
-| ttft_p50_s | +34.6% | +30.5% | **4.1 pt** | ✅ OK |
-| ttft_p95_s | +308.8% | +390.9% | 82.1 pt | ❌ MISS |
-| e2e_p50_s | +10.2% | +25.2% | 15.0 pt | ❌ MISS *(marginal)* |
-| e2e_p95_s | +110.9% | +180.1% | 69.2 pt | ❌ MISS |
-| throughput_tok_s | −3.8% | −4.0% | **0.2 pt** | ✅ OK |
-| prefix_cache_hit_rate | −13.5% | −15.2% | **1.7 pt** | ✅ OK |
+| ttft_p50_s | +0.0% | −0.8% | **0.8 pt** | ✅ OK |
+| ttft_p95_s | +6.7% | +29.1% | 22.4 pt | ❌ MISS |
+| e2e_p50_s | +1.0% | +0.2% | **0.7 pt** | ✅ OK |
+| e2e_p95_s | +0.2% | +4.9% | **4.7 pt** | ✅ OK |
+| throughput_tok_s | −0.9% | −1.6% | **0.7 pt** | ✅ OK |
+| prefix_cache_hit_rate | −0.6% | −1.3% | **0.7 pt** | ✅ OK |
 
-**Held-out total: 9 of 12 rows within the bar.** The `e2e_p50` miss clears the bar by
-0.04 points — `gap = 15.0426 pt` against a 15.0 pt threshold. It is a miss and is counted
-as one, but it should not be read as a qualitatively different result from a pass.
+**Held-out total: 10 of 12.** Both misses are the *same metric*. Nine of the ten passing
+rows clear the bar by more than 10 points.
 
-### Held-out absolute values
-
-| Metric | sim_D | real_D | err | sim_E | real_E | err |
-|---|---|---|---|---|---|---|
-| ttft_p50_s | 0.231 | 0.246 | −6.1% | 0.311 | 0.321 | −3.1% |
-| ttft_p95_s | 0.829 | 0.604 | +37.3% | 3.389 | 3.196 | **+6.0%** |
-| e2e_p50_s | 3.709 | 4.796 | −22.7% | 4.086 | 6.045 | −32.4% |
-| e2e_p95_s | 5.686 | 7.217 | −21.2% | 11.989 | 21.103 | −43.2% |
-| throughput_tok_s | 220.0 | 208.7 | +5.4% | 211.7 | 199.5 | +6.1% |
-| prefix_cache_hit_rate | 0.862 | 0.859 | **+0.3%** | 0.746 | 0.726 | **+2.8%** |
-| preemptions | 0 | 0 | ✅ | 0 | 0 | ✅ |
+v0.3 made a sharp, falsifiable claim on G before the run: quadrupling
+`--max-num-batched-tokens` from 2048 to 8192 would be nearly inert, because in the step
+model total prefill work is unchanged and only its granularity moves. Measurement agreed on
+five of six rows — e2e_p50 predicted +1.0% against +0.2% measured. The exception is exactly
+where a granularity change should show up: the TTFT tail.
 
 ---
 
 ## 4. In-sample results (development data — proves nothing)
 
-Reported for regression only. **3 of 11 rows** within the bar, against 1 of 11 in run 1.
+**15 of 23 rows** within the bar.
 
-| Row | sim Δ | real Δ | gap | Verdict |
+| Row | sim Δ | real Δ | gap | |
 |---|---|---|---|---|
-| B vs A ttft_p50_s | +18874.5% | +22402.4% | 3528.0 pt | MISS |
-| B vs A ttft_p95_s | +15301.6% | +22553.6% | 7252.0 pt | MISS |
-| B vs A e2e_p50_s | +2175.8% | +1889.5% | 286.2 pt | MISS |
-| B vs A e2e_p95_s | +2571.4% | +2200.7% | 370.6 pt | MISS |
-| B vs A throughput_tok_s | −46.3% | −49.5% | **3.2 pt** | ✅ OK |
-| C vs A ttft_p50_s | +408.2% | +470.7% | 62.5 pt | MISS |
-| C vs A ttft_p95_s | +2823.0% | +4190.8% | 1367.7 pt | MISS |
-| C vs A e2e_p50_s | +129.4% | +205.7% | 76.2 pt | MISS |
-| C vs A e2e_p95_s | +588.2% | +467.3% | 120.9 pt | MISS |
-| C vs A throughput_tok_s | −17.3% | −17.7% | **0.4 pt** | ✅ OK |
-| C vs A prefix_cache_hit_rate | −30.4% | −30.3% | **0.1 pt** | ✅ OK |
+| B vs A ttft_p50_s | +21170.3% | +22523.2% | 1352.9 pt | MISS |
+| B vs A ttft_p95_s | +19143.4% | +22993.6% | 3850.2 pt | MISS |
+| B vs A e2e_p50_s | +2167.8% | +1894.2% | 273.6 pt | MISS |
+| B vs A e2e_p95_s | +2636.3% | +2212.5% | 423.7 pt | MISS |
+| B vs A throughput_tok_s | −46.5% | −49.6% | **3.1 pt** | ✅ OK |
+| C vs A ttft_p50_s | +486.0% | +472.0% | **14.1 pt** | ✅ OK |
+| C vs A ttft_p95_s | +3994.8% | +4239.1% | 244.3 pt | MISS |
+| C vs A e2e_p50_s | +145.2% | +204.6% | 59.4 pt | MISS |
+| C vs A e2e_p95_s | +656.0% | +466.3% | 189.7 pt | MISS |
+| C vs A throughput_tok_s | −18.7% | −17.6% | **1.1 pt** | ✅ OK |
+| C vs A prefix_cache_hit_rate | −31.1% | −30.2% | **0.9 pt** | ✅ OK |
+| D vs A (all six rows) | +0.0% | +0.4 … −9.2% | **0.4–9.2 pt** | ✅ **6/6 OK** |
+| E vs A ttft_p50_s | +31.9% | +32.5% | **0.6 pt** | ✅ OK |
+| E vs A ttft_p95_s | +406.7% | +396.9% | **9.8 pt** | ✅ OK |
+| E vs A e2e_p50_s | +9.8% | +24.4% | **14.7 pt** | ✅ OK |
+| E vs A e2e_p95_s | +117.7% | +176.7% | 59.0 pt | MISS |
+| E vs A throughput_tok_s | −3.8% | −3.9% | **0.1 pt** | ✅ OK |
+| E vs A prefix_cache_hit_rate | −13.5% | −15.1% | **1.6 pt** | ✅ OK |
 
-The B-vs-A rows remain enormous for the reason established in run 1: config B's relative
-change is measured against a config-A baseline whose *absolute* tail is small (0.651 s),
-so any baseline error is amplified into thousands of points. This is a property of the
-metric definition as much as of the simulator.
+E improved sharply against run 2: `ttft_p95` 82.1 → **9.8 pt**, `e2e_p50` 15.04 (MISS) →
+**14.7 pt (OK)**. B's rows remain enormous for the structural reason established in run 1 —
+the relative change is divided by a config-A tail of 0.64 s, so any baseline error becomes
+thousands of points.
 
 ---
 
-## 5. v0 → v0.2, error per metric on A/B/C
+## 5. Product scorecard
 
-Absolute error `|sim − real| / real`, run 1 (v0) against run 2 (v0.2). Note the real runs
-differ slightly between the two: run 2 uses `--drop-first 10`.
+### Cost metrics — **every gap inside the bar**
 
-| Config | Metric | v0 error | v0.2 error | |
+| Config | throughput sim/real | abs err | gap vs A | gpu_s/1k sim/real\* | abs err | hit sim/real | abs err | gap vs A |
+|---|---|---|---|---|---|---|---|---|
+| A | 209.9 / 207.7 | +1.1% | — | 4.521 / 4.514 | +0.2% | 0.862 / 0.855 | +0.8% | — |
+| B | 112.3 / 104.6 | +7.4% | **3.1 pt** | 8.890 / 9.411 | −5.5% | 0.000 / n/a | — | — |
+| C | 170.7 / 171.2 | −0.3% | **1.1 pt** | 5.724 / 5.541 | +3.3% | 0.594 / 0.597 | −0.5% | **0.9 pt** |
+| D | 209.9 / 208.7 | +0.6% | **0.5 pt** | 4.521 / 4.491 | +0.7% | 0.862 / 0.859 | +0.3% | **0.5 pt** |
+| E | 201.9 / 199.6 | +1.2% | **0.1 pt** | 4.791 / 4.715 | +1.6% | 0.746 / 0.726 | +2.8% | **1.6 pt** |
+| **F**\*\* | 203.5 / 201.3 | +1.1% | **0.0 pt** | 4.671 / 4.667 | +0.1% | 0.838 / 0.812 | +3.2% | **2.2 pt** |
+| **G**\*\* | 208.1 / 204.4 | +1.8% | **0.7 pt** | 4.562 / 4.596 | −0.7% | 0.857 / 0.844 | +1.5% | **0.7 pt** |
+
+\* `gpu_s/1k` real is **derived**, not measured: `makespan × mean nvidia-smi utilisation ÷
+output tokens`. `bench.py` does not measure GPU-seconds, so treat this column as an estimate.
+\*\* held-out.
+
+**Cost is solved for this workload.** Throughput within 1.8% on every config except B,
+derived cost-per-1k-tokens within 3.3%, hit rate within 3.2%, and every cost gap ≤ 3.1 pt
+against a 15-point bar. If the product question is "what will this config change do to my
+serving cost and cache efficiency", v0.3 answers it — including on both held-out axes.
+
+### SLA metrics — where it still fails
+
+| Metric | A | B | C | D | E | F\*\* | G\*\* |
+|---|---|---|---|---|---|---|---|
+| ttft_p50 abs err | −6.9% | −12.5% | −4.6% | −7.3% | −7.4% | −9.1% | −6.1% |
+| ttft_p50 gap | — | 1352.9 | **14.1** | **0.4** | **0.6** | **2.4** | **0.8** |
+| ttft_p95 abs err | +4.4% | −13.0% | −1.5% | +14.9% | +6.4% | −31.0% | −13.8% |
+| ttft_p95 gap | — | 3850.2 | 244.3 | **9.2** | **9.8** | 71.8 | 22.4 |
+| e2e_p50 abs err | **−21.1%** | −10.2% | −36.4% | **−20.2%** | −30.4% | **−22.9%** | **−20.5%** |
+| e2e_p50 gap | — | 273.6 | 59.4 | **1.1** | **14.7** | **2.4** | **0.7** |
+| e2e_p95 abs err | **−25.7%** | −12.0% | −0.8% | **−22.4%** | −41.5% | **−23.1%** | **−29.0%** |
+| e2e_p95 gap | — | 423.7 | 189.7 | **4.2** | 59.0 | **4.3** | **4.7** |
+
+The scorecard exposes something the relative bar hides: **every e2e absolute error is
+negative**, 20–41% across all seven configs. The e2e *deltas* pass on D, E, F and G
+precisely because the bias is uniform and cancels in the ratio. That is a real predictive
+limitation being masked by the metric definition, and it is the subject of §7.1.
+
+---
+
+## 6. v0.2 → v0.3: what `c_kv` recovery actually bought
+
+Absolute error `|sim − real| / real` on A, D and E, with signed error in brackets.
+
+| Config | Metric | v0.2 err | v0.3 err | |
 |---|---|---|---|---|
-| A | ttft_p50_s | 25.4% | **6.1%** | better |
-| A | ttft_p95_s | 867.0% | **27.3%** | better |
-| A | e2e_p50_s | **2.3%** | 23.2% | **worse** |
-| A | e2e_p95_s | 388.4% | **24.5%** | better |
-| A | throughput_tok_s | **0.9%** | 5.9% | **worse** |
-| A | prefix_cache_hit_rate | 15.2% | **0.7%** | better |
-| B | ttft_p50_s | 22.8% | 20.8% | ~same |
-| B | ttft_p95_s | 17.6% | **13.4%** | better |
-| B | e2e_p50_s | 16.2% | **12.1%** | better |
-| B | e2e_p95_s | 15.8% | **12.4%** | better |
-| B | throughput_tok_s | **9.9%** | 12.7% | **worse** |
-| C | ttft_p50_s | 76.1% | **16.4%** | better |
-| C | ttft_p95_s | 84.5% | **13.2%** | better |
-| C | e2e_p50_s | 68.4% | **42.3%** | better |
-| C | e2e_p95_s | 58.0% | **8.5%** | better |
-| C | throughput_tok_s | 22.5% | **6.4%** | better |
-| C | prefix_cache_hit_rate | 65.7% | **0.5%** | better |
+| A | ttft_p50_s | 6.1% [−6.1] | 6.9% [−6.9] | worse |
+| A | **ttft_p95_s** | 27.3% [+27.3] | **4.4% [+4.4]** | **better** |
+| A | **e2e_p50_s** | 23.2% [−23.2] | 21.1% [−21.1] | ~same |
+| A | **e2e_p95_s** | 24.5% [−24.5] | 25.7% [−25.7] | ~same |
+| A | throughput_tok_s | 5.9% [+5.9] | **1.1% [+1.1]** | **better** |
+| A | prefix_cache_hit_rate | 0.7% | 0.8% | worse |
+| D | ttft_p50_s | 6.1% [−6.1] | 7.3% [−7.3] | worse |
+| D | **ttft_p95_s** | 37.3% [+37.3] | **14.9% [+14.9]** | **better** |
+| D | **e2e_p50_s** | 22.7% [−22.7] | 20.2% [−20.2] | better |
+| D | **e2e_p95_s** | 21.2% [−21.2] | 22.4% [−22.4] | ~same |
+| D | throughput_tok_s | 5.4% [+5.4] | **0.6% [+0.6]** | **better** |
+| D | prefix_cache_hit_rate | 0.3% | 0.3% | ~same |
+| E | ttft_p50_s | 3.1% [−3.1] | 7.4% [−7.4] | worse |
+| E | ttft_p95_s | 6.0% [+6.0] | 6.4% [+6.4] | ~same |
+| E | **e2e_p50_s** | 32.4% [−32.4] | 30.4% [−30.4] | ~same |
+| E | **e2e_p95_s** | 43.2% [−43.2] | 41.5% [−41.5] | ~same |
+| E | throughput_tok_s | 6.1% [+6.1] | **1.2% [+1.2]** | **better** |
+| E | prefix_cache_hit_rate | 2.8% | 2.8% | ~same |
 
-**Mean absolute error: 103.3% → 14.5%** (n = 17). 14 metrics better, 3 worse, 1 unchanged.
+**Mean absolute error: 15.2% → 12.0%** (n = 18).
 
-Delta gaps against config A, in points:
+### The e2e rows in isolation — the point of the exercise
 
-| Row | v0 gap | v0.2 gap |
-|---|---|---|
-| B vs A ttft_p50_s | 7471.9 | 3528.0 |
-| B vs A ttft_p95_s | 15588.0 | 7252.0 |
-| B vs A e2e_p50_s | 267.8 | 286.2 |
-| B vs A e2e_p95_s | 1836.3 | **370.6** |
-| B vs A throughput_tok_s | 4.5 | **3.2** |
-| C vs A ttft_p50_s | 340.7 | **62.5** |
-| C vs A ttft_p95_s | 3187.0 | **1367.7** |
-| C vs A e2e_p50_s | 199.6 | **76.2** |
-| C vs A e2e_p95_s | 501.7 | **120.9** |
-| C vs A throughput_tok_s | 17.7 | **0.4** |
-| C vs A prefix_cache_hit_rate | 30.6 | **0.1** |
-
-### 5.1 What each v0.2 change bought
-
-**Change 3 (cache coupled to the block pool) — the standout.** Run 1's headline defect was
-a *sign error*: v0 predicted reuse would rise as the pool shrank while the engine's hit
-rate collapsed. Fixed and then some:
-
-| | config A | config C | config E (held-out) |
+| Row | v0.2 | v0.3 | change |
 |---|---|---|---|
-| sim hit rate | 0.862 | 0.600 | 0.746 |
-| real hit rate | 0.856 | 0.597 | 0.726 |
-| error | +0.7% | **+0.5%** | **+2.8%** |
+| A e2e_p50 | 23.2% | 21.1% | −2.1 pt |
+| A e2e_p95 | 24.5% | 25.7% | +1.1 pt |
+| D e2e_p50 | 22.7% | 20.2% | −2.4 pt |
+| D e2e_p95 | 21.2% | 22.4% | +1.2 pt |
+| E e2e_p50 | 32.4% | 30.4% | −2.0 pt |
+| E e2e_p95 | 43.2% | 41.5% | −1.7 pt |
+| **mean** | **27.9%** | **26.9%** | **−1.0 pt** |
 
-The C-vs-A hit-rate delta gap went from 30.6 pt (wrong direction) to **0.1 pt**, and it
-generalised to an unseen pool size at 1.7 pt. This is the strongest evidence in the run
-that the fix is real physics and not a fit to the development data.
+**Recovering `c_kv` bought 1.0 point of e2e error.** After run 2 I hypothesised that
+`c_kv = 0` was the cause of the 21–43% e2e under-prediction and that recovering it would be
+the highest-value fix. **That hypothesis is falsified.** The KV term is now identified and
+positive, and the e2e gap is essentially unchanged — three rows improved by ~2 points, two
+got slightly worse, and every row remains under-predicted by 20–42% with the same sign.
 
-**Change 1 (blocks published during prefill).** Config A's ttft_p95 error fell from +867%
-to +27.3% and e2e_p95 from +388% to −24.5%. The manufactured tail is gone.
-
-**Change 2 (routine preemption).** v0 predicted zero preemptions everywhere. v0.2 predicts
-11 (B) and 16 (C) against measured 9 and 10 — the right order of magnitude and, more
-importantly, the right *set*: zero predicted and zero measured for A, D and E.
-
-**Change 6 (extended decode grid) — mixed.** It doubled `b_d` and improved config B's
-latency errors by 2–4 points each. But it also collapsed `c_kv` to zero, and that is the
-best explanation for the one clear regression: **config A e2e_p50 went from 2.3% error to
-23.2%, in the direction of the simulator being too fast.** With `c_kv = 0`, decode steps
-cost the same at 4,000 tokens of context as at 400, so the long-context tail of the trace
-decodes too cheaply and predicted end-to-end times run short. The same signature appears
-on every held-out row: e2e_p50 −22.7% (D) and −32.4% (E), e2e_p95 −21.2% (D) and −43.2%
-(E) — all under-predictions, all on the metrics most exposed to accumulated decode time.
-
-**Change 7 (`--drop-first`) — a residual asymmetry.** `bench.py --drop-first 10` was used
-on all five real runs, as instructed. The simulator has no equivalent, so **sim percentiles
-cover 192 requests and real percentiles cover 182.** The dropped requests are the earliest
-arrivals, which are also the ones that miss the prefix cache hardest, so the two sides are
-not computing percentiles over the same population. Not corrected — noted so it is not
-mistaken for physics.
+What v0.3 *did* buy is real but sits elsewhere: **`ttft_p95` on the in-sample configs**
+(A 27.3% → 4.4%, D 37.3% → 14.9%) and **throughput** (5.9% → 1.1%, 5.4% → 0.6%,
+6.1% → 1.2%), which is what carried the cost scorecard to near-perfect.
 
 ---
 
-## 6. Why the remaining misses happen
+## 7. Hypotheses for the remaining failures
 
-Hypotheses only. No simulator code or `perf.json` was modified before or after the runs.
+No simulator code or `perf.json` was modified at any point.
 
-### 6.1 The E tail misses are mostly a baseline artifact, not an E modelling error
+### 7.1 The e2e under-prediction is a fixed ~5.6 ms per decode step the model never sees
 
-`ttft_p95` for E has an *absolute* error of only **+6.0%** (3.389 s predicted, 3.196 s
-measured) — one of the most accurate numbers in the whole run. Its delta still misses by
-82.1 pt because the config-A baseline it is divided by is off by +27.3% (0.829 vs 0.651).
-A 27% error on a 0.65 s baseline is 0.18 s in absolute terms, which is negligible
-operationally and enormous once turned into a ratio against a config whose tail grew 4×.
+Measuring the `e2e_p50` deficit per output token on the four low-queue configs (median
+output = 186 tokens over the kept 182 requests):
 
-This is the same amplification that dominated run 1, now at one twentieth the magnitude.
-It argues that the 15-point bar on *relative* change is a harsh instrument when the
-baseline metric is small: `compare.py` divides by a config-A tail of 0.65 s, so a
-sub-second modelling error becomes a three-figure gap.
+| Config | sim | real | deficit | ms per output token |
+|---|---|---|---|---|
+| A | 3.822 | 4.842 | 1.020 s | **5.48** |
+| D | 3.822 | 4.791 | 0.969 s | **5.21** |
+| F | 3.878 | 5.028 | 1.150 s | **6.18** |
+| G | 3.859 | 4.854 | 0.995 s | **5.35** |
+| | | | | **mean 5.56, stdev 0.43** |
 
-### 6.2 The `e2e` under-prediction: missing context-dependent decode cost
+The deficit is **invariant across a 5,450 → 4,607 block range and a 4× change in prefill
+budget**. That is the signature of a constant per-decode-step cost, not of a mis-fitted
+context or batch coefficient — which is precisely why recovering `c_kv` did nothing for it
+(§6). At a modelled step time of 15.2 ms, an unmodelled 5.6 ms is **43% of the fitted
+per-step constant `a` = 12.94 ms**.
 
-Every `e2e` row across A, D and E is under-predicted, by 21–43%. The single change that
-would produce exactly this is `c_kv = 0.0` (§2). The trace's contexts grow from ~1,900 to
-~5,000 tokens across a session's eight turns, so accumulated decode cost is precisely
-where a missing context term shows up, and it shows up in `e2e` far more than in `ttft`.
-Consistent with this: `ttft_p50` errors are small everywhere (−6.1% A, −6.1% D, −3.1% E)
-because TTFT is dominated by prefill, where `b_p` is intact and essentially unchanged
-between v0 and v0.2 (0.00041879 → 0.00041896).
+**Hypothesis: `a` is fitted on the wrong execution path.** `calibrate.py` measures vLLM's
+**offline** `LLM()` batch API; `bench.py` measures the **online** OpenAI HTTP server with
+`stream: True`. The online path adds, per step and per token, scheduler bookkeeping,
+incremental detokenization, SSE frame construction and HTTP write — none of which the
+offline path pays. TTFT barely shows it because TTFT is dominated by `b_p × prompt_tokens`;
+e2e accumulates it over ~186 steps. This is a **calibration-harness** issue, like the
+`c_kv` grid before it, not simulator physics.
 
-**This is a calibration-design issue, not a simulator-physics issue.** The step model still
-has a `c_kv` term; the extended grid simply cannot identify it. A grid that varies context
-at fixed batch — rather than adding three points that all vary batch — would recover it.
+It also explains the one place the effect is absent: config C's `e2e_p95` absolute error is
+only −0.8%, because C is so queue-bound that waiting time swamps per-step overhead.
 
-### 6.3 Config B's remaining gaps
+### 7.2 Both held-out misses are `ttft_p95`, and both are under-prediction of tail queueing
 
-B is uniformly better than v0 (13.4% / 12.1% / 12.4% on the p95/p50 metrics versus
-17.6% / 16.2% / 15.8%) but still under-predicted by ~12–21%. The extended decode grid
-absorbed part of the TP all-reduce cost into `b_d`, which is why it improved; the residual
-is consistent with the remaining un-modelled communication on a config that runs both GPUs
-at 98.4% for five minutes.
+F: sim +40.0% vs real +111.8%. G: sim +6.7% vs real +29.1%. In both, the simulator captures
+the direction and gets the median right (`ttft_p50` gaps of 2.4 and 0.8 pt) but
+under-predicts how heavy the *tail* of the first-token wait becomes.
 
----
+For **G** the mechanism is specific and was visible in the prediction itself: with
+`--max-num-batched-tokens 8192`, one prefill step can consume 8,192 tokens ≈ 3.4 s of GPU
+time. The simulator charges that step `b_p × 8192` and moves on, so a request arriving
+behind it waits one step. Real vLLM cannot preempt a running prefill chunk either, but the
+step is long enough that queue build-up behind it is non-linear — arrivals stack during a
+single 3.4 s step. The simulator's step-granular queueing under-represents this. That the
+error appears *only* at p95 and only on the axis that quadrupled step size is consistent.
 
-## 7. Run integrity
+For **F** the same mechanism operates through pool pressure rather than step size: at 0.78
+the pool is tight enough that admission stalls become bursty, and burstiness lives in the
+tail, not the median.
 
-- **Recalibration committed before any prediction** (`55de5f6`).
-- **All five predictions committed before any real run** (`43fe037`), freeze absolute from
-  that commit. Nothing under it was regenerated or edited; both mismatches discovered
-  afterwards (D's pool, `c_kv`) are reported as findings.
-- **Held-out runs executed first** (D, E), before A/B/C, so the in-sample regression could
-  not influence them.
-- **Server fully restarted between every run**, readiness polled on `/health`.
-- **`--drop-first 10`** on all five real runs; `dropped_warmup: 10`, 182 requests scored.
+### 7.3 Config B's remaining gaps
 
-### One operator error, and what it cost
+B is uniformly under-predicted by 10–13% and it is the one config that runs both GPUs at
+98.4% for five minutes. The `Custom allreduce is disabled … lacks GPU P2P capability`
+warning means TP collectives cross PCIe host memory here, so the un-modelled communication
+term is larger on this box than on hardware with NVLink or working P2P. Still the best
+candidate from the README's original list, and still un-modelled.
 
-The first attempt at the A/B/C batch invoked `run_config.sh A` without a utilisation
-argument, so `serve.sh` fell back to the RUNBOOK's default of **0.90** rather than the
-0.85 the predictions were made against. Config A died in CUDA-graph capture after 41 s —
-the same non-determinism documented in run 1 — before writing any output. The loop was
-stopped, verified to have produced no `real_A/B/C.json`, and A and B were re-run at 0.85.
-The held-out D and E runs had already completed at their correct settings and were
-untouched. No prediction was altered; this was a wrong-invocation error, not a
-freeze violation.
+### 7.4 The metric definition continues to distort the verdict
 
-### Teardown hygiene
-
-`scripts/stop_server.sh` reaps orphaned `VLLM::Worker` processes as built in run 1. It
-needed one further fix this run: `pkill -f` also matches the *invoking shell's* command
-line, so a teardown call in a command that mentioned `replay_sim.calibrate` killed its own
-caller. The script now excludes its own process ancestry before signalling.
+Config B's rows are 273–3850 points off while its *absolute* errors are 10–13%. C's
+`ttft_p95` absolute error is 1.5% and its gap is 244 pt. These are artifacts of dividing by
+a small config-A baseline, not statements about predictive quality. The product scorecard
+in §5 exists because of this: it shows absolute error next to the gap, and on cost metrics
+the two agree, while on tail-latency metrics they diverge sharply.
 
 ---
 
-## 8. Where this leaves the hypothesis
+## 8. Run integrity
 
-The v0.2 result is a genuine advance, and the parts that improved are the parts that
-matter most for the product axis:
+- **Recalibration committed before any prediction** (`cca9676`); calibration gate checked
+  and passed before proceeding, as instructed.
+- **All seven predictions committed before any real run** (`e28649b`), freeze absolute.
+  The one post-freeze mismatch (G's pool, +0.7%) is reported, not reconciled.
+- **Held-out runs executed first** (F, G), before the in-sample five.
+- **`--drop-first 10` on both `bench.py` and the simulator**, so both score exactly 182
+  requests. The run-2 asymmetry (sim 192 vs real 182) is gone.
+- **Server fully restarted between all seven runs**; readiness polled on `/health`.
+- **Reproducibility check:** config D was run in both run 2 and run 3 with the same
+  settings. e2e_p50 4.796 → 4.791 s, throughput 208.7 → 208.7 tok/s. The box is stable;
+  differences between runs are the simulator's, not the hardware's.
 
-- **The cache/pool model is now trustworthy.** Hit rate predicted within 0.5–2.8% across
-  three different pool sizes including an unseen one, with the run-1 sign error eliminated.
-- **Throughput is solid on every axis**: 3.2, 0.4, 0.2 pt gaps on B, C and E.
-- **The scheduler axis passes outright**, 6/6, including a correct prediction that the
-  change would be a no-op.
-- **Preemption is qualitatively right** for the first time.
+### Tooling fixes this run
 
-What is left is narrower and better understood than run 1's failure:
+`scripts/serve.sh` now defaults A and B to 0.85 rather than the RUNBOOK's 0.90, with a
+comment explaining why. In run 2 I invoked `run_config.sh A` without the utilisation
+argument, the default sent it to 0.90, and it died in CUDA-graph capture. Removing the
+footgun rather than relying on remembering the argument.
 
-1. **Recover `c_kv`.** Vary context at fixed batch in the calibration grid so the KV term
-   is identifiable. This is the highest-value fix and it is in `calibrate.py`, not the
-   simulator — it is the direct cause of the 21–43% `e2e` under-predictions and of the one
-   metric that regressed from v0.
-2. **Reduce the config-A tail baseline error** (+27.3% on ttft_p95). Because every delta
-   divides by it, this single number gates several held-out rows at once.
-3. **Add the TP communication term** — still worth ~12–21% on saturated configs.
-4. **Consider whether the bar is measuring what it should.** A 0.18 s absolute error on a
-   0.65 s baseline becoming an 82-point gap suggests pairing the relative-change bar with
-   an absolute-error floor, so sub-second differences on fast configs stop dominating the
-   verdict.
+---
 
-Two of the three remaining held-out misses trace back to items 1 and 2, and the third
-(`e2e_p50`, 15.0 pt) misses by 0.04 points.
+## 9. Where this leaves the hypothesis
+
+Three runs in, the picture is sharp:
+
+**What is validated.** Cost prediction. Throughput within 1.8%, derived GPU-seconds per 1k
+tokens within 3.3%, prefix-cache hit rate within 3.2%, on five distinct config axes
+including two held-out ones — with every cost gap ≤ 3.1 points against a 15-point bar. The
+cache/pool model that was qualitatively wrong in run 1 (a sign error) now generalises to
+unseen pool sizes at 0.7–2.2 points.
+
+**What is not.** Tail latency. Both held-out misses are `ttft_p95`, and a uniform 20–41%
+e2e under-prediction runs through every config, currently hidden from the verdict because
+it cancels in the ratio.
+
+**The two open defects are both in the calibration harness, not the simulator.** Run 2's
+was the decode grid failing to identify `c_kv`; run 3's is `a` being fitted on the offline
+engine while the benchmark measures the online server. That pattern is worth naming: the
+step model has been adequate each time, and what has actually limited accuracy is how its
+coefficients are measured.
+
+Ranked next steps:
+
+1. **Fit `a` on the online path.** Drive the HTTP server with a fixed batch at steady state
+   and fit per-step cost from it, or add an explicit per-token online-overhead term. §7.1
+   measures the target: ~5.6 ms per decode step, 43% of the current `a`. This is the single
+   change that would move every e2e row at once.
+2. **Model queue build-up within a long prefill step** (§7.2) — the mechanism behind both
+   held-out misses, and specifically exposed by the G axis.
+3. **Add the TP communication term** — still the best explanation for B's 10–13%, and
+   larger than usual on this box because P2P is unavailable.
+4. **Report absolute error alongside relative gaps as standard.** The scorecard already
+   does this; the verdict criterion still does not. Any change to that criterion belongs
+   between rounds, in writing — flagging it, not doing it.
+
+A fourth run that fixes only item 1 would be a clean test: it should move all seven e2e
+absolute errors toward zero while leaving the cost scorecard untouched, and it would tell
+us whether the two `ttft_p95` misses are independent of it or downstream of the same cause.

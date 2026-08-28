@@ -1,0 +1,21 @@
+kept requests=182  median output_len=186 tokens
+
+e2e_p50 deficit per OUTPUT TOKEN (real - sim), run 3
+cfg       sim     real  deficit s  ms/out-tok
+A       3.822    4.842      1.020        5.48
+D       3.822    4.791      0.969        5.21
+F       3.878    5.028      1.150        6.18
+G       3.859    4.854      0.995        5.35
+
+mean 5.56 ms/out-tok, stdev 0.43 -> a fixed per-decode-step cost, invariant to pool size and prefill budget
+
+for contrast, the queue-bound configs (deficit not per-token):
+C       9.372   14.747      5.375       28.90
+E       4.195    6.024      1.829        9.83
+
+modelled step time at ctx~3500: t = a + b_d*n + c_kv*n*ctx/1e6
+  n_decode=4: t_step=14.45 ms -> 14.45 ms per token per sequence
+  n_decode=6: t_step=15.21 ms -> 15.21 ms per token per sequence
+  n_decode=8: t_step=15.97 ms -> 15.97 ms per token per sequence
+
+an unmodelled ~5.5 ms/step is 43% of the fitted per-step constant a=12.94 ms
