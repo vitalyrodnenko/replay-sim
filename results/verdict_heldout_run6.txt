@@ -1,0 +1,14 @@
+baseline: config A
+
+ cfg                 metric     sim d    real d  gap pt  abs err    v1    v2
+   J             ttft_p50_s     +0.9%     +0.4%     0.5    -6.5%    OK    OK
+   J             ttft_p95_s    +27.4%     +9.8%    17.6   +32.5%  MISS  MISS
+   J              e2e_p50_s     +2.1%     +0.1%     1.9    -4.6%    OK    OK
+   J              e2e_p95_s    +14.5%     +6.5%     8.0    +2.4%    OK    OK
+   J       throughput_tok_s     -1.2%     -1.8%     0.6    -0.5%    OK    OK
+   J  prefix_cache_hit_rate     -1.1%     -1.5%     0.5    -0.5%    OK    OK
+
+v1: 5 of 6 rows within bar
+v2: 5 of 6 rows within bar
+
+VERDICT v1: FAIL   VERDICT v2: FAIL

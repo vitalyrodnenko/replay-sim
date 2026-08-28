@@ -4,6 +4,7 @@
  run 3  v0.3    ABCDEFG |        35      25      32 |        12      10      11
  run 4  v0.4    ABCDEFG |        35      23      32 |        --      --      --
  run 5  v0.5  ABCDEFGHI |        47      36      44 |        12      10      11
+ run 6  v0.6 ABCDEFGHIJ |        53      44      50 |         6       5       5
 
 -- rows rescued by v2 (latency, |abs err| <= 15%) --
   run 2 v0.2: B ttft_p95_s         gap  7252.0 pt, abs err  -13.4%

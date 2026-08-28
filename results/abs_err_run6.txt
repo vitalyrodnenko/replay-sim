@@ -1,0 +1,9 @@
+== mean |absolute error| per metric, A-I: v0.5 -> v0.6 ==
+                metric     v0.5     v0.6    change
+            ttft_p50_s    7.41%    7.41%    +0.01pt
+            ttft_p95_s   13.26%   18.65%    +5.38pt
+             e2e_p50_s    7.65%    6.71%    -0.94pt
+             e2e_p95_s   10.77%    4.29%    -6.48pt
+      throughput_tok_s    1.20%    1.10%    -0.11pt
+ prefix_cache_hit_rate    1.14%    0.72%    -0.42pt
+           ALL METRICS    7.01%    6.59%    -0.42pt
