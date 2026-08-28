@@ -50,7 +50,7 @@ def main():
 
     # --- decode: batch of B seqs at ctx C, generate 64 tokens, per-step time
     rows = []
-    for B, C in [(1, 512), (8, 512), (32, 512), (8, 4096), (32, 2048), (64, 512), (96, 512), (128, 256)]:
+    for B, C in [(1, 512), (8, 512), (8, 2048), (8, 4096), (16, 4096), (32, 512), (32, 2048), (64, 512), (64, 1024), (96, 512), (128, 256)]:
         p = prompt_of(C)
         sp = SamplingParams(max_tokens=64, ignore_eos=True)
         llm.generate([p] * B, sp)                  # warmup
@@ -67,6 +67,15 @@ def main():
     coef, *_ = np2.linalg.lstsq(A, y, rcond=None)
     a2, b_d, c_kv = coef.tolist()
 
+    pred = A @ coef
+    ss_res = float(((y - pred) ** 2).sum())
+    ss_tot = float(((y - y.mean()) ** 2).sum())
+    r2 = 1 - ss_res / ss_tot if ss_tot else float("nan")
+    if c_kv <= 0:
+        print("WARNING: c_kv fitted <= 0 (%.6f). The design matrix cannot "
+              "identify the KV term; decode time will have no context "
+              "dependence. Check grid coverage before predicting." % c_kv)
+    print(f"decode fit R^2 = {r2:.5f}")
     perf = {"a": max(a_const, a2, 1e-4), "b_p": float(b_p),
             "b_d": float(max(b_d, 1e-6)), "c_kv": float(max(c_kv, 0.0))}
     json.dump(perf, open(a.out, "w"), indent=2)

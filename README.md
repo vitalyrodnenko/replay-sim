@@ -122,3 +122,29 @@ Recalibrate first (the grid changed), then predict D and E, commit, then
 run for real. The bar is unchanged: every config-change delta within 15
 points. Report the A/B/C regression numbers separately and label them
 "in-sample".
+
+---
+
+# v0.3 changelog (2026-08-27, after validation run 2)
+
+1. Calibration grid redesigned for identifiability: context now varies at
+   fixed batch (B=8 at ctx 512/2048/4096, B=32 at 512/2048, B=64 at
+   512/1024) alongside the saturated points, so kv is decorrelated from
+   batch and c_kv is recoverable. calibrate.py prints decode-fit R^2 and
+   warns loudly if c_kv clamps to zero.
+2. simulator.py --drop-first N aligns percentile populations with
+   bench.py (run 2 compared sim over 192 requests vs real over 182).
+
+# Run 3 protocol notes
+
+- The 15-point relative bar is UNCHANGED and remains the verdict.
+  Additionally report a product scorecard: cost metrics (throughput,
+  gpu_s_per_1k, hit rate) and SLA metrics (ttft/e2e percentiles) in two
+  separate tables with absolute errors alongside relative gaps. Any
+  change to the verdict criterion happens between rounds, in writing,
+  never during one.
+- A/B/C/D/E are all development data now (D and E informed v0.3's
+  calibration redesign). Run 3 held-out candidates: F = pool at an
+  unseen point 0.78, G = --max-batched-tokens 8192 (chunked-prefill
+  axis, never varied before). Predict, commit, then run.
+- Use --drop-first 10 on BOTH bench.py and simulator.py, same N.

@@ -292,13 +292,16 @@ def simulate(trace, cfg: Cfg, perf: Perf):
         "preemptions": preempt_total,
     }
 
-def summarize(reqs, agg):
+def summarize(reqs, agg, drop_first=0):
+    if drop_first:
+        keep_ids = set(r.rid for r in sorted(reqs, key=lambda r: r.arrival)[drop_first:])
+        reqs = [r for r in reqs if r.rid in keep_ids]
     ttfts = sorted(r.ttft for r in reqs)
     e2e = sorted(r.finish - r.arrival for r in reqs)
     out_tok = sum(r.output_len for r in reqs)
     def p(v, q): return v[min(len(v)-1, int(q*len(v)))]
     return {
-        "requests": len(reqs),
+        "requests": len(reqs),  # after drop_first
         "ttft_p50_s": round(p(ttfts, .5), 3), "ttft_p95_s": round(p(ttfts, .95), 3),
         "e2e_p50_s": round(p(e2e, .5), 3),   "e2e_p95_s": round(p(e2e, .95), 3),
         "throughput_tok_s": round(out_tok / agg["makespan_s"], 1),
@@ -319,6 +322,9 @@ def main():
     ap.add_argument("--max-num-seqs", type=int, default=128)
     ap.add_argument("--max-batched-tokens", type=int, default=2048)
     ap.add_argument("--no-prefix-caching", action="store_true")
+    ap.add_argument("--drop-first", type=int, default=0,
+                    help="exclude first N arrivals from summary stats, "
+                         "matching bench.py --drop-first (still simulated)")
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
     trace = [json.loads(l) for l in open(a.trace)]
@@ -328,7 +334,7 @@ def main():
               max_batched_tokens=a.max_batched_tokens,
               prefix_caching=not a.no_prefix_caching)
     reqs, agg = simulate(trace, cfg, perf)
-    s = summarize(reqs, agg)
+    s = summarize(reqs, agg, drop_first=a.drop_first)
     s["config"] = {"num_blocks": cfg.num_blocks, "block_size": cfg.block_size,
                    "max_num_seqs": cfg.max_num_seqs,
                    "max_batched_tokens": cfg.max_batched_tokens,
