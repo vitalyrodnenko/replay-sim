@@ -1,0 +1,1 @@
+/home/vitaly/Projects/inferenceOptimization01/.venv/bin/vllm serve Qwen/Qwen3-32B-AWQ --port 8000 --tensor-parallel-size 2 --max-model-len 8192 --max-num-seqs 128 --gpu-memory-utilization 0.85 --max-num-batched-tokens 8192 --enable-prefix-caching

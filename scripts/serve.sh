@@ -7,14 +7,19 @@ MODEL="${MODEL:-Qwen/Qwen3-32B-AWQ}"
 VENV="$(pwd)/.venv/bin"
 export PATH="$VENV:$PATH"
 source "$(pwd)/scripts/env.sh"
+# NOTE: A/B default to 0.85, not the RUNBOOK's 0.90: 0.90 OOMs non-deterministically
+# in CUDA graph capture on this box (run 1 and run 2 both). Every prediction since
+# run 1 has been made against the 0.85 pool.
 MNS=128
 case "$cfg" in
-  A)      GMU="${2:-0.90}"; MBT=2048; PC="--enable-prefix-caching" ;;
-  B)      GMU="${2:-0.90}"; MBT=2048; PC="--no-enable-prefix-caching" ;;
+  A)      GMU="${2:-0.85}"; MBT=2048; PC="--enable-prefix-caching" ;;
+  B)      GMU="${2:-0.85}"; MBT=2048; PC="--no-enable-prefix-caching" ;;
   Bprime) GMU="${2:-0.90}"; MBT=8192; PC="--enable-prefix-caching" ;;
   C)      GMU="${2:-0.60}"; MBT=2048; PC="--enable-prefix-caching" ;;
   D)      GMU="${2:-0.85}"; MBT=2048; PC="--enable-prefix-caching"; MNS=32 ;;
   E)      GMU="${2:-0.70}"; MBT=2048; PC="--enable-prefix-caching" ;;
+  F)      GMU="${2:-0.78}"; MBT=2048; PC="--enable-prefix-caching" ;;
+  G)      GMU="${2:-0.85}"; MBT=8192; PC="--enable-prefix-caching" ;;
   *) echo "unknown config: $cfg" >&2; exit 1 ;;
 esac
 

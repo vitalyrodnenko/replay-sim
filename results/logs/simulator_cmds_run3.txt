@@ -1,0 +1,7 @@
+python -m replay_sim.simulator --trace results/trace.jsonl --perf results/perf.json --num-blocks 5450 --max-num-seqs 128 --max-batched-tokens 2048 --drop-first 10 --out results/sim_A.json
+python -m replay_sim.simulator --trace results/trace.jsonl --perf results/perf.json --num-blocks 5450 --max-num-seqs 128 --max-batched-tokens 2048 --drop-first 10 --no-prefix-caching --out results/sim_B.json
+python -m replay_sim.simulator --trace results/trace.jsonl --perf results/perf.json --num-blocks 2440 --max-num-seqs 128 --max-batched-tokens 2048 --drop-first 10 --out results/sim_C.json
+python -m replay_sim.simulator --trace results/trace.jsonl --perf results/perf.json --num-blocks 5490 --max-num-seqs 32  --max-batched-tokens 2048 --drop-first 10 --out results/sim_D.json
+python -m replay_sim.simulator --trace results/trace.jsonl --perf results/perf.json --num-blocks 3644 --max-num-seqs 128 --max-batched-tokens 2048 --drop-first 10 --out results/sim_E.json
+python -m replay_sim.simulator --trace results/trace.jsonl --perf results/perf.json --num-blocks 4607 --max-num-seqs 128 --max-batched-tokens 2048 --drop-first 10 --out results/sim_F.json
+python -m replay_sim.simulator --trace results/trace.jsonl --perf results/perf.json --num-blocks 5106 --max-num-seqs 128 --max-batched-tokens 8192 --drop-first 10 --out results/sim_G.json
