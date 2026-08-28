@@ -1,0 +1,8 @@
+=== [A] stopping anything running ===
+stopped; VRAM in use: 255 MiB; compute apps: 0
+=== [A] starting server ===
+started config A (gpu-mem-util=0.90, max-num-batched-tokens=2048, --enable-prefix-caching) pid=23375
+=== [A] waiting for readiness ===
+SERVER_DIED after 45s
+[A] SERVER FAILED TO BECOME READY
+RUNEXIT=2

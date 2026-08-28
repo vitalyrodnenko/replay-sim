@@ -1,3 +1,3 @@
-python -m replay_sim.simulator --trace results/trace.jsonl --perf results/perf.json --num-blocks 5738 --out results/sim_A.json
-python -m replay_sim.simulator --trace results/trace.jsonl --perf results/perf.json --num-blocks 5738 --no-prefix-caching --out results/sim_B.json
+python -m replay_sim.simulator --trace results/trace.jsonl --perf results/perf.json --num-blocks 5450 --out results/sim_A.json
+python -m replay_sim.simulator --trace results/trace.jsonl --perf results/perf.json --num-blocks 5450 --no-prefix-caching --out results/sim_B.json
 python -m replay_sim.simulator --trace results/trace.jsonl --perf results/perf.json --num-blocks 2440 --out results/sim_C.json
