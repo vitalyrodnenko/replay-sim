@@ -1,0 +1,30 @@
+  B= 96 ctx= 256 rep0: step  57.253 ms (median itl  57.26, spread  0.01, win 168 steps)
+  B= 96 ctx= 256 rep1: step  57.169 ms (median itl  57.23, spread  0.02, win 167 steps)
+  B= 96 ctx= 256 rep2: step  57.257 ms (median itl  57.31, spread  0.02, win 167 steps)
+  -> B=96 ctx=256: median 57.253 ms  peakKV 49,152 (56%)  preempt +0.0
+  B= 96 ctx= 512 rep0: step  60.715 ms (median itl  60.73, spread  0.02, win 155 steps)
+  B= 96 ctx= 512 rep1: step  60.768 ms (median itl  60.71, spread  0.01, win 155 steps)
+  B= 96 ctx= 512 rep2: step  60.663 ms (median itl  60.67, spread  0.00, win 155 steps)
+  -> B=96 ctx=512: median 60.715 ms  peakKV 73,728 (85%)  preempt +0.0
+  B=112 ctx= 256 rep0: step  64.844 ms (median itl  64.78, spread  0.02, win 165 steps)
+  B=112 ctx= 256 rep1: step  64.790 ms (median itl  64.74, spread  0.01, win 165 steps)
+  B=112 ctx= 256 rep2: step  64.831 ms (median itl  64.78, spread  0.02, win 165 steps)
+  -> B=112 ctx=256: median 64.831 ms  peakKV 57,344 (66%)  preempt +0.0
+  B=112 ctx= 512 rep0: step  68.729 ms (median itl  68.67, spread  0.01, win 122 steps)
+  B=112 ctx= 512 rep1: step  68.779 ms (median itl  68.77, spread  0.01, win 122 steps)
+  B=112 ctx= 512 rep2: step  68.709 ms (median itl  68.70, spread  0.02, win 122 steps)
+  -> B=112 ctx=512: median 68.729 ms  peakKV 82,768 (95%)  preempt +0.0
+  B=128 ctx= 256 rep0: step  70.016 ms (median itl  70.07, spread  0.02, win 163 steps)
+  B=128 ctx= 256 rep1: step  69.991 ms (median itl  70.00, spread  0.02, win 163 steps)
+  B=128 ctx= 256 rep2: step  70.029 ms (median itl  69.97, spread  0.02, win 163 steps)
+  -> B=128 ctx=256: median 70.016 ms  peakKV 65,536 (75%)  preempt +0.0
+  B=128 ctx= 512 rep0: step  73.656 ms (median itl  73.59, spread  0.03, win 26 steps)
+  B=128 ctx= 512 rep1: step  73.632 ms (median itl  73.52, spread  0.02, win 26 steps)
+  B=128 ctx= 512 rep2: step  73.686 ms (median itl  73.62, spread  0.02, win 26 steps)
+  -> B=128 ctx=512: median 73.656 ms  peakKV 82,816 (95%)  preempt +0.0
+  B= 32 ctx= 512 rep0: step  26.536 ms (median itl  26.52, spread  0.00, win 172 steps)
+  B= 32 ctx= 512 rep1: step  26.382 ms (median itl  26.36, spread  0.00, win 172 steps)
+  B= 32 ctx= 512 rep2: step  26.514 ms (median itl  26.54, spread  0.01, win 172 steps)
+  -> B=32 ctx=512: median 26.514 ms  peakKV 24,576 (28%)  preempt +0.0
+
+wrote results/satprobe/measurements.json
