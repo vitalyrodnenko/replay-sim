@@ -159,3 +159,34 @@ The mechanism is **unresolved**. A first-boot/compile-cache story fits the probe
 
 Because the pool was asserted on every boot, **none of the repeats above is affected**. Whether any published single-boot run was is not something this batch can answer, and it is not claimed.
 
+
+---
+
+## Correction, 2026-08-29 — the "grows with pool pressure" reading is falsified
+
+The bottom line above says the noise "grows with pool pressure", and §1's caveat says
+configs deeper in the pressure zone "may well be noisier than either" A or J. Both
+statements were extrapolations from two points, and `results/LADDER_REPORT.md` has
+since measured two more. They are wrong.
+
+| config | util | `ttft_p95` CV | n |
+|---|---|---|---|
+| C | 0.60 | **0.25%** | 8 |
+| K | 0.75 | **0.32%** | 8 |
+| J | 0.82 | **6.07%** | 14 |
+| A | 0.85 | **0.69%** | 14 |
+
+C and K, the two configs under the most pool pressure, are the *quietest* of the four
+— quieter than A. J is a spike, not the top of a ramp.
+
+And J's spread is **bimodal**: two of its fourteen runs sit at 0.700–0.702 s and the
+other twelve at 0.828–0.842 s, with nothing between. Its 6.07% CV is the distance
+between two modes being averaged, not scatter around one.
+
+**What this does and does not change.** The measured numbers for A and J are
+unchanged, and so is §4's result that no published verdict row falls inside the noise
+band — that comparison used A's and J's own measured CVs, which stand. What is
+withdrawn is the interpretation: there is no monotone relationship between pool
+pressure and benchmark noise on this workload, so the §4 sensitivity proxy of
+max(CV_A, CV_J) for unmeasured configs is, on this evidence, conservative rather than
+optimistic. The three headline numbers in that section's summary are unaffected.

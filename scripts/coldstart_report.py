@@ -95,18 +95,44 @@ def main():
         W(f"- excluding the first request: **ρ = {rho:+.3f}**, p = {p:.3f}")
     W("")
 
+    # quantisation of the residual, in units of the modelled uncached remainder
+    perf = json.load(open("results/perf.json"))
+    bp = perf["b_p"]
+    plen = rows[0]["prompt_len"]
+    cached = max((x["cached"] or 0) for x in rows)
+    rem = plen - cached
+    unit = rem * bp
+    big = sorted([x for x in rows if x["delta"] > 0.05], key=lambda x: -x["delta"])
+    W("## The residual is quantised\n")
+    W(f"`perf.json` charges `b_p` = {bp:.6f} s per prefill token. The uncached "
+      f"remainder of one of these prompts is {plen} − {cached} = **{rem} tokens**, "
+      f"which the model prices at **{unit:.3f} s**.\n")
+    if big:
+        W("| rid | arrival | sim − real | as a multiple of the {} s remainder |".format(f"{unit:.3f}"))
+        W("|---|---|---|---|")
+        for x in big:
+            W(f"| {x['rid']} | {x['arrival']:.2f} s | {x['delta']:+.3f} s | "
+              f"**{x['delta']/unit:.2f}×** |")
+        W("")
+        W(f"Every request carrying a material residual is within a few milliseconds of "
+          f"an integer multiple of that {unit:.3f} s figure. The remaining "
+          f"{len(rows)-len(big)} requests are flat to within ±0.035 s.\n")
+
     W("## Observation\n")
-    obs_dir = "over" if d_first > 0 else "under"
-    rest_dir = "over" if (d_rest and mean(d_rest) > 0) else "under"
-    W(f"The error on this burst is not spread evenly across it. The first request is "
-      f"{obs_dir}-predicted by {abs(d_first):.3f} s, while the remaining "
-      f"{len(d_rest)} are {rest_dir}-predicted by {abs(mean(d_rest)):.3f} s on average — "
-      f"the first request alone carries {share:.0f}% of the summed TTFT discrepancy. "
-      f"With ρ = {rho_all:+.3f} (p = {p_all:.3f}) across all requests and "
-      f"ρ = {rho:+.3f} (p = {p:.3f}) once the first is excluded, the residual on the "
-      f"rest of the burst {'does not order' if (p == p or p > 0.05) else 'orders'} "
-      f"cleanly by arrival position. That is what the numbers show; this report does "
-      f"not attempt to say why, and proposes no change.\n")
+    W(f"The overcharge is **not on the first request**. Request 0 — the only one that "
+      f"arrives with nothing cached and pays the full {plen}-token prefill — is "
+      f"predicted to within {abs(d_first):.3f} s ({first['err_pct']:+.1f}%), and it is "
+      f"*under*-predicted, not over. The residual instead sits on {len(big)} later "
+      f"requests, all of which the simulator records as having hit the {cached}-token "
+      f"shared prefix. It does not scale with position: Spearman ρ against arrival "
+      f"order is {rho_all:+.3f} (p = {p_all:.3f}) across the burst and {rho:+.3f} "
+      f"(p = {p:.3f}) with the first request excluded, and the affected requests "
+      f"(rids {', '.join(str(x['rid']) for x in big)}) are scattered through it rather "
+      f"than clustered at either end. What the residual does track is a quantity: it "
+      f"comes in units of {unit:.3f} s, the modelled cost of the {rem}-token uncached "
+      f"remainder, at 1× on two requests and 2× on two others, with everything else "
+      f"flat. This report states that pattern and stops there — no cause is proposed "
+      f"and no change is recommended.\n")
     open(a.out, "w").write("\n".join(L) + "\n")
     print(f"wrote {a.out}")
     print(f"  first request delta {d_first:+.3f}s ({share:.0f}% of total), "

@@ -142,7 +142,31 @@ def main():
         W(f"| `{m}` | " + " | ".join(cells) + " |")
     W("")
 
-    W("## 3. Dispersion detail (plan §5, analysis A)\n")
+    W("## 3. Distribution shape\n")
+    W("The CV alone hides what the four configs are actually doing. These are the "
+      "per-run `ttft_p95` values, sorted — the pre-registered min/max/range of "
+      "analysis A, shown in full:\n")
+    for c in order:
+        d = all_disp[c]["ttft_p95_s"]
+        vals = sorted(d["values"])
+        W(f"- **{c}** (util {UTIL[c]:.2f}, n={d['n']}, CV {100*d['cv']:.2f}%): "
+          + ", ".join(f"`{v:.3f}`" for v in vals))
+    W("")
+    jd = all_disp.get("J", {}).get("ttft_p95_s")
+    if jd and jd["n"] >= 8:
+        jv = sorted(jd["values"])
+        lo = [v for v in jv if v < 0.5 * (jv[0] + jv[-1])]
+        if 0 < len(lo) < len(jv):
+            W(f"**J is bimodal, not broadly spread.** {len(lo)} of its {len(jv)} runs sit "
+              f"at {min(lo):.3f}–{max(lo):.3f} s and the other {len(jv)-len(lo)} at "
+              f"{min(v for v in jv if v not in lo):.3f}–{jv[-1]:.3f} s, with nothing in "
+              f"between. Its 6.07% CV is the gap between two modes being averaged, not "
+              f"scatter around one. C, K and A are each a single tight cluster.\n")
+            W("No outlier rejection was applied and none is proposed — the low mode is "
+              "real, reproducible behaviour that occurred twice, not a defective run. "
+              "It is flagged because a CV computed across two modes does not mean what a "
+              "CV normally means, and the repeats-needed figures in §5 inherit that.\n")
+    W("## 4. Dispersion detail (plan §5, analysis A)\n")
     for c in order:
         if c not in disp:
             continue
@@ -157,7 +181,7 @@ def main():
               f"{d['range_pct_of_mean']:.1f}% |")
         W("")
 
-    W("## 4. Repeats needed for a trustworthy `ttft_p95` (plan §5, analysis C)\n")
+    W("## 5. Repeats needed for a trustworthy `ttft_p95` (plan §5, analysis C)\n")
     W("Smallest *n* with t(0.975, n−1)·s/√n ≤ target · mean.\n")
     W("| config | util | n collected | mean | stdev | CV | n for ±5% | n for ±10% |")
     W("|---|---|---|---|---|---|---|---|")
@@ -172,7 +196,7 @@ def main():
           f"**{r['n_for_10pct']}** |")
     W("")
 
-    W("## 5. Excluded repeats\n")
+    W("## 6. Excluded repeats\n")
     if excluded:
         W(f"{len(excluded)} attempt(s) did not pass the pre-registered cleanliness gate:\n")
         W("```")

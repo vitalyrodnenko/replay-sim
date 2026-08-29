@@ -1,0 +1,42 @@
+== diagnose config coldstart_A: 14 aligned requests ==
+
+top-5% ttft sets: sim [8]
+                  real [9]
+overlap: 0/1 (DIFFERENT requests, mechanism problem)
+
+-- mean ttft (sim-real), by turn:
+   turn=0: +0.116s  (n=14)
+
+-- mean ttft (sim-real), by arrival_quintile:
+   arrival_quintile=0: +0.137s  (n=4)
+   arrival_quintile=1: +0.001s  (n=1)
+   arrival_quintile=2: +0.006s  (n=1)
+   arrival_quintile=3: +0.159s  (n=5)
+   arrival_quintile=4: +0.091s  (n=3)
+
+-- mean ttft (sim-real), by prompt_len_kbucket:
+   prompt_len_kbucket=1: +0.116s  (n=14)
+
+-- 10 most OVER-predicted (sim slower than real):
+   rid=   1 turn=0 sess= 11 arr=    1.3 plen= 1920 sim=  0.915 real=  0.327 diff= +0.588 cached= 1200 pre=0
+   rid=   8 turn=0 sess=  8 arr=    7.6 plen= 1920 sim=  0.920 real=  0.338 diff= +0.583 cached= 1200 pre=0
+   rid=   6 turn=0 sess=  3 arr=    6.3 plen= 1920 sim=  0.622 real=  0.329 diff= +0.293 cached= 1200 pre=0
+   rid=  12 turn=0 sess=  9 arr=    9.8 plen= 1920 sim=  0.629 real=  0.337 diff= +0.293 cached= 1200 pre=0
+   rid=   5 turn=0 sess=  2 arr=    4.3 plen= 1920 sim=  0.339 real=  0.333 diff= +0.006 cached= 1200 pre=0
+   rid=   4 turn=0 sess=  0 arr=    2.7 plen= 1920 sim=  0.333 real=  0.332 diff= +0.001 cached= 1200 pre=0
+   rid=  11 turn=0 sess= 13 arr=    9.5 plen= 1920 sim=  0.332 real=  0.334 diff= -0.002 cached= 1200 pre=0
+   rid=   2 turn=0 sess=  5 arr=    1.3 plen= 1920 sim=  0.883 real=  0.894 diff= -0.011 cached= 1200 pre=0
+   rid=   3 turn=0 sess= 10 arr=    1.4 plen= 1920 sim=  0.828 real=  0.840 diff= -0.012 cached= 1200 pre=0
+   rid=   7 turn=0 sess=  1 arr=    6.4 plen= 1920 sim=  0.558 real=  0.571 diff= -0.013 cached= 1200 pre=0
+
+-- 10 most UNDER-predicted (sim faster than real):
+   rid=   9 turn=0 sess=  6 arr=    7.7 plen= 1920 sim=  0.876 real=  0.910 diff= -0.034 cached= 1200 pre=0
+   rid=  10 turn=0 sess=  7 arr=    7.7 plen= 1920 sim=  0.787 real=  0.821 diff= -0.034 cached= 1200 pre=0
+   rid=   0 turn=0 sess=  4 arr=    0.1 plen= 1920 sim=  0.809 real=  0.828 diff= -0.019 cached=    0 pre=0
+   rid=  13 turn=0 sess= 12 arr=    9.8 plen= 1920 sim=  0.607 real=  0.626 diff= -0.019 cached= 1200 pre=0
+   rid=   7 turn=0 sess=  1 arr=    6.4 plen= 1920 sim=  0.558 real=  0.571 diff= -0.013 cached= 1200 pre=0
+   rid=   3 turn=0 sess= 10 arr=    1.4 plen= 1920 sim=  0.828 real=  0.840 diff= -0.012 cached= 1200 pre=0
+   rid=   2 turn=0 sess=  5 arr=    1.3 plen= 1920 sim=  0.883 real=  0.894 diff= -0.011 cached= 1200 pre=0
+   rid=  11 turn=0 sess= 13 arr=    9.5 plen= 1920 sim=  0.332 real=  0.334 diff= -0.002 cached= 1200 pre=0
+   rid=   4 turn=0 sess=  0 arr=    2.7 plen= 1920 sim=  0.333 real=  0.332 diff= +0.001 cached= 1200 pre=0
+   rid=   5 turn=0 sess=  2 arr=    4.3 plen= 1920 sim=  0.339 real=  0.333 diff= +0.006 cached= 1200 pre=0
