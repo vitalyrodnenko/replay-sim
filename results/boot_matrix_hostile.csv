@@ -1,0 +1,5 @@
+boot,mode,vram_before_mib,pool_tokens,ready_s,note
+h_clean,hostile,255,87200,36,clean boot from idle, for reference
+h_kill1s,hostile,255,87200,35,SIGKILL then 1s wait
+h_kill2s,hostile,255,87200,35,SIGKILL then 2s wait
+h_kill3s,hostile,255,87200,35,SIGKILL then 3s wait

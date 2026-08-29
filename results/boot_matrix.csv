@@ -3,3 +3,9 @@ boot,mode,vram_before_mib,pool_tokens,ready_s,shape_cache_present,sys_uptime_s
 2,loose,255,87200,36,yes,44678
 3,strict,255,87200,40,yes,44721
 4,loose,255,87200,35,yes,44758
+5,strict,255,87200,35,yes,44796
+6,loose,255,87200,35,yes,44834
+7,strict,255,87200,35,yes,44872
+8,loose,255,87200,35,yes,44909
+9,strict,255,87200,35,yes,44947
+10,loose,255,87200,36,yes,44985

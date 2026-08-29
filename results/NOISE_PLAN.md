@@ -221,3 +221,24 @@ Nothing about the three changes depends on the mechanism: a strict drain, assert
 the granted pool against the config's published value, and a discarded warm-up are all
 motivated by the reproducibility failure alone. NOISE_REPORT.md will report the
 observation and explicitly say the cause is unresolved.
+
+## Follow-up, 2026-08-29 — the drain was not the mechanism
+
+The amendment above justified the strict VRAM drain by arguing that
+`stop_server.sh`'s 1500 MiB threshold "is not tight enough to guarantee a clean
+boot". `results/BOOT_MATRIX.md` has since tested that directly and it is wrong:
+across 10 boots alternating the two thresholds, and 4 more that SIGKILLed the server
+and restarted within 1–3 s, pre-boot VRAM read 255 MiB every single time and the pool
+was 87,200 every single time. The driver reclaims memory faster than either threshold
+can matter.
+
+The mechanism is instead the **first boot of a new `(mbt, mns)` shape**: two novel
+shapes were each booted twice with the strict drain held constant, and each gained
+4,272–5,408 tokens on the second boot while starting 31–35 s faster. That is
+compilation and CUDA-graph capture, cached the second time.
+
+**This does not change any measurement.** The strict drain is harmless, the asserted
+pool is what actually protected the batches — every boot of A, J, K and C was a
+long-warmed shape and landed exactly on its expected value — and no number in
+NOISE_REPORT or LADDER_REPORT depends on the rationale being right. What is withdrawn
+is the explanation, not the protocol.
