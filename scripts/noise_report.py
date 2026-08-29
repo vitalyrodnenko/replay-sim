@@ -8,7 +8,7 @@ import argparse, json, os
 METRICS = ["ttft_p50_s", "ttft_p95_s", "e2e_p50_s", "e2e_p95_s",
            "throughput_tok_s", "prefix_cache_hit_rate"]
 PCT = ["ttft_p50_s", "ttft_p95_s", "e2e_p50_s", "e2e_p95_s"]
-CFGS = ["A", "J"]
+CFGS = ["A", "J"]   # narrowed at runtime to configs actually present
 
 
 def main():
@@ -19,6 +19,7 @@ def main():
     a = ap.parse_args()
     S = json.load(open(a.stats))
     disp, boot = S["dispersion"], S["bootstrap"]
+    cfgs = [c for c in CFGS if c in disp and "ttft_p95_s" in disp[c]]
     reps, band, drift = S["repeats"], S["noise_band"], S["drift"]
 
     excluded = []
@@ -36,14 +37,15 @@ def main():
       "amended and corrected before any counted repeat.  ")
     W("**No simulator change. No `perf.json` change. No published verdict is re-scored.**\n")
 
-    nA = disp["A"]["ttft_p95_s"]["n"]
-    nJ = disp["J"]["ttft_p95_s"]["n"]
+    counts = {c: disp[c]["ttft_p95_s"]["n"] for c in cfgs}
+    nA = counts.get("A", 0)
+    nJ = counts.get("J", 0)
     W(f"**Clean repeats:** config A **{nA}**, config J **{nJ}**, "
       f"run alternating with a full server restart, strict VRAM drain and an asserted "
       f"KV pool before every one.\n")
 
-    cvA = disp["A"]["ttft_p95_s"]["cv"] * 100
-    cvJ = disp["J"]["ttft_p95_s"]["cv"] * 100
+    cvA = disp["A"]["ttft_p95_s"]["cv"] * 100 if "A" in cfgs else float("nan")
+    cvJ = disp["J"]["ttft_p95_s"]["cv"] * 100 if "J" in cfgs else float("nan")
     W("## Bottom line\n")
     W(f"`ttft_p95` — the metric that has carried every held-out failure since run 3 — "
       f"has a run-to-run CV of **{cvA:.1f}%** on config A and **{cvJ:.1f}%** on config J. "
@@ -51,7 +53,7 @@ def main():
 
     # ---- 1. dispersion ----
     W("## 1. Dispersion across repeats (plan §4)\n")
-    for cfg in CFGS:
+    for cfg in cfgs:
         W(f"### Config {cfg} (n = {disp[cfg]['ttft_p95_s']['n']})\n")
         W("| metric | mean | stdev | CV | min | max | median | range as % of mean |")
         W("|---|---|---|---|---|---|---|---|")
@@ -70,7 +72,7 @@ def main():
     W("| config | metric | median within-run CI width | as % of the value | "
       "across-run spread (CV) |")
     W("|---|---|---|---|---|")
-    for cfg in CFGS:
+    for cfg in cfgs:
         for m in PCT:
             b = boot[cfg][m]
             W(f"| {cfg} | `{m}` | {b['median_width']:.4f} s | "
@@ -86,14 +88,15 @@ def main():
     W("Smallest *n* with t(0.975, n−1)·s/√n ≤ target · mean.\n")
     W("| config | mean | stdev | CV | n for ±5% | n for ±10% | (±5%, z) | (±10%, z) |")
     W("|---|---|---|---|---|---|---|---|")
-    for cfg in CFGS:
+    for cfg in [c for c in cfgs if c in reps]:
         r = reps[cfg]
         W(f"| {cfg} | {r['mean']:.4f} s | {r['stdev']:.4f} | {100*r['cv']:.2f}% | "
           f"**{r['n_for_5pct']}** | **{r['n_for_10pct']}** | "
           f"{r['n_for_5pct_z']} | {r['n_for_10pct_z']} |")
     W("")
-    worst5 = max(reps[c]["n_for_5pct"] for c in CFGS)
-    worst10 = max(reps[c]["n_for_10pct"] for c in CFGS)
+    have = [c for c in cfgs if c in reps]
+    worst5 = max((reps[c]["n_for_5pct"] for c in have), default=None)
+    worst10 = max((reps[c]["n_for_10pct"] for c in have), default=None)
     W(f"> Every `ttft_p95` number in runs 1–8a rests on **one** run. To state one to "
       f"±10% takes **{worst10}** repeats on this workload; to ±5%, **{worst5}**.\n")
 
@@ -146,7 +149,7 @@ def main():
       "start of that run, with permutation p-values (10,000 permutations, seed 12345).\n")
     W("| config | n | ρ vs run index | p | ρ vs start temp | p |")
     W("|---|---|---|---|---|---|")
-    for cfg in CFGS:
+    for cfg in cfgs:
         d = drift.get(cfg)
         if not d:
             continue

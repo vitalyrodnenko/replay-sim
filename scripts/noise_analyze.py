@@ -212,9 +212,17 @@ def main():
               open(a.out_json, "w"), indent=2, default=float)
     print(f"wrote {a.out_json}")
     for cfg in ("A", "J"):
+        if cfg not in A or "ttft_p95_s" not in A[cfg]:
+            continue
         s = A[cfg]["ttft_p95_s"]
-        print(f"  {cfg}: ttft_p95 mean={s['mean']:.3f}s sd={s['stdev']:.3f} CV={100*s['cv']:.1f}% "
-              f"n={s['n']}  -> repeats for +/-5%: {C[cfg]['n_for_5pct']}, +/-10%: {C[cfg]['n_for_10pct']}")
+        line = (f"  {cfg}: ttft_p95 mean={s['mean']:.3f}s sd={s['stdev']:.3f} "
+                f"CV={100*s['cv']:.1f}% n={s['n']}")
+        if cfg in C:
+            line += (f"  -> repeats for +/-5%: {C[cfg]['n_for_5pct']}, "
+                     f"+/-10%: {C[cfg]['n_for_10pct']}")
+        else:
+            line += "  (need n>=2 for the repeats calculation)"
+        print(line)
 
 
 if __name__ == "__main__":
