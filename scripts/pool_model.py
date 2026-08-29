@@ -1,60 +1,55 @@
 """Size the KV pool vLLM grants for an arbitrary (util, mbt, mns) setting.
 
 The sweep needs num_blocks for 256 combinations; the published series only ever
-booted 10 of them. Rather than guess, this builds the mapping out of pool sizes
-actually measured on this box -- the published runs plus tonight's probes.
-
-Form:
+booted 10 of them, and tonight's probing showed the pool is NOT reproducible across
+boots (identical settings gave 82,656 and 87,680 tokens -- see the amendment in
+results/NOISE_PLAN.md). So this module is explicit about how much each number is
+worth, rather than pretending to a precision the box does not have.
 
     tokens(util, mbt, mns) = base(util) + off_mbt[mbt] + off_mns[mns]
 
-  * base(util) is a straight line fitted to the utilisation points measured at the
-    reference setting (mbt 2048, mns 128). Those points are very nearly exactly
-    collinear, so this is interpolation, not extrapolation.
-  * off_mbt and off_mns are MEASURED PER LEVEL, not fitted slopes. This matters:
-    the pool is NOT monotonic in mbt. mbt=1024 and mbt=8192 both cost 4,944 tokens
-    relative to mbt=2048, so any linear term in mbt is simply wrong.
-  * The offsets are assumed independent of util. That assumption is directly
-    supported: the mbt=8192 offset measured -4,944 tokens at util 0.85 (A->G) and
-    -4,944 tokens at util 0.78 (F->I), identical. It is additionally checked
-    out-of-sample by a held-out probe that moves all three axes at once.
+base(util) is fitted on the eight utilisation points measured at the reference
+setting (mbt 2048, mns 128) -- the shape used by nearly every run in the series.
+Those eight are collinear to within 4 tokens, so base() is trustworthy.
 
-Prefix caching does not enter: config B (caching off) was granted exactly the same
-pool as config A.
+The offsets are a hand-audited table, not a fit, because their provenance differs
+and that difference is the whole point:
 
-usage: python scripts/pool_model.py [--probe-csv results/pool_probe.csv]
+  CONFIRMED  measured twice, consistently, at two different utilisations
+  PUBLISHED  a single measurement from the published series
+  SINGLE     one probe tonight, and tonight showed single probes can be off by
+             ~5,000 tokens for reasons that are not understood
+  ESTIMATED  no measurement at all; extrapolated from the neighbouring levels
+
+`--variant optimistic` adds back 5,024 tokens (the size of the observed
+irreproducibility) to every SINGLE/ESTIMATED level, so the sweep can be run both
+ways and the ranking checked for robustness against this exact uncertainty.
 """
 import argparse, csv, json, os
 
 REF_MBT, REF_MNS = 2048, 128
+IRREPRODUCIBILITY_TOKENS = 5024   # 87,680 - 82,656, same settings, two boots
 
-# Measured in the published series, each read from that run's own startup log
-# (results/logs/kv_pool_*.txt).
-PUBLISHED = [
-    ("C", 0.60, 2048, 128, "on", 39040),
-    ("E", 0.70, 2048, 128, "on", 58304),
-    ("K", 0.75, 2048, 128, "on", 67936),
-    ("F", 0.78, 2048, 128, "on", 73712),
-    ("J", 0.82, 2048, 128, "on", 81424),
-    ("A", 0.85, 2048, 128, "on", 87200),
-    ("H", 0.88, 2048, 128, "on", 92976),
-    ("D", 0.85, 2048,  32, "on", 87840),
-    ("G", 0.85, 8192, 128, "on", 82256),
-    ("I", 0.78, 8192, 128, "on", 68768),
+# util points at the reference shape (mbt 2048, mns 128), from each run's own log
+BASE_POINTS = [
+    ("C", 0.60, 39040), ("p_u065", 0.65, 48672), ("E", 0.70, 58304),
+    ("K", 0.75, 67936), ("F", 0.78, 73712), ("J", 0.82, 81424),
+    ("A", 0.85, 87200), ("H", 0.88, 92976),
 ]
 
-
-def load_probes(path):
-    pts = []
-    if not os.path.exists(path):
-        return pts
-    with open(path) as f:
-        for row in csv.DictReader(f):
-            if row.get("status") != "OK" or not row.get("tokens"):
-                continue
-            pts.append((row["tag"], float(row["util"]), int(row["mbt"]),
-                        int(row["mns"]), row["pc"], int(row["tokens"])))
-    return pts
+# offset, confidence, provenance
+OFF_MBT = {
+    1024: (-4944, "SINGLE",    "p_mbt1024 tonight, one boot"),
+    2048: (0,     "CONFIRMED", "reference shape, booted dozens of times in the series"),
+    4096: (-5184, "SINGLE",    "p_mbt4096 tonight, one boot"),
+    8192: (-4944, "CONFIRMED", "G at util 0.85 (-4,944) and I at util 0.78 (-4,947), agree to 3 tokens"),
+}
+OFF_MNS = {
+    16:  (700,  "ESTIMATED", "no clean measurement; extrapolated from 32:+640, 64:+480, 128:0"),
+    32:  (640,  "PUBLISHED", "config D, run 2"),
+    64:  (480,  "SINGLE",    "p_repeat_mns64 (87,680); the earlier p_mns64 boot gave 82,656"),
+    128: (0,    "CONFIRMED", "reference shape"),
+}
 
 
 def linfit(xs, ys):
@@ -62,95 +57,48 @@ def linfit(xs, ys):
     mx, my = sum(xs) / n, sum(ys) / n
     sxx = sum((x - mx) ** 2 for x in xs)
     sxy = sum((x - mx) * (y - my) for x, y in zip(xs, ys))
-    slope = sxy / sxx
-    return slope, my - slope * mx
+    s = sxy / sxx
+    return s, my - s * mx
 
 
-def build(points):
-    ref = [(u, t) for _, u, b, s, _, t in points if b == REF_MBT and s == REF_MNS]
-    if len(ref) < 3:
-        raise SystemExit("need >=3 reference-setting points to fit base(util)")
-    slope, inter = linfit([u for u, _ in ref], [t for _, t in ref])
-
-    def base(u):
-        return slope * u + inter
-
-    off_mbt, off_mns = {REF_MBT: 0.0}, {REF_MNS: 0.0}
-    for _, u, b, s, _, t in points:
-        if s == REF_MNS and b != REF_MBT:
-            off_mbt.setdefault(b, []) if False else None
-            off_mbt[b] = t - base(u)
-        if b == REF_MBT and s != REF_MNS:
-            off_mns[s] = t - base(u)
-    return {"slope": slope, "intercept": inter, "off_mbt": off_mbt,
-            "off_mns": off_mns, "ref_mbt": REF_MBT, "ref_mns": REF_MNS,
-            "base_points": len(ref)}
+def build(variant="measured"):
+    slope, inter = linfit([u for _, u, _ in BASE_POINTS], [t for _, _, t in BASE_POINTS])
+    bump = IRREPRODUCIBILITY_TOKENS if variant == "optimistic" else 0
+    ob = {k: (v + (bump if c in ("SINGLE", "ESTIMATED") else 0), c, p)
+          for k, (v, c, p) in OFF_MBT.items()}
+    om = {k: (v + (bump if c in ("SINGLE", "ESTIMATED") else 0), c, p)
+          for k, (v, c, p) in OFF_MNS.items()}
+    return {"slope": slope, "intercept": inter, "variant": variant,
+            "off_mbt": {str(k): v[0] for k, v in ob.items()},
+            "off_mns": {str(k): v[0] for k, v in om.items()},
+            "off_mbt_meta": {str(k): {"tokens": v[0], "confidence": v[1], "provenance": v[2]}
+                             for k, v in ob.items()},
+            "off_mns_meta": {str(k): {"tokens": v[0], "confidence": v[1], "provenance": v[2]}
+                             for k, v in om.items()},
+            "block_size": 16, "base_points": len(BASE_POINTS),
+            "irreproducibility_tokens": IRREPRODUCIBILITY_TOKENS}
 
 
 def predict(m, util, mbt, mns):
-    ob, os_ = m["off_mbt"], m["off_mns"]
-    kb, ks = str(mbt), str(mns)
-    if kb not in ob and mbt not in ob:
-        raise KeyError(f"no measured offset for mbt={mbt}")
-    if ks not in os_ and mns not in os_:
-        raise KeyError(f"no measured offset for mns={mns}")
-    b = ob.get(mbt, ob.get(kb))
-    s = os_.get(mns, os_.get(ks))
-    return m["slope"] * util + m["intercept"] + b + s
+    return (m["slope"] * util + m["intercept"]
+            + m["off_mbt"][str(mbt)] + m["off_mns"][str(mns)])
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--probe-csv", default="results/pool_probe.csv")
+    ap.add_argument("--variant", choices=["measured", "optimistic"], default="measured")
     ap.add_argument("--out", default="results/pool_model.json")
-    ap.add_argument("--block-size", type=int, default=16)
-    ap.add_argument("--holdout", default=None,
-                    help="tag of a probe to EXCLUDE from the fit and test against")
     a = ap.parse_args()
-
-    pts = PUBLISHED + load_probes(a.probe_csv)
-    seen, uniq = set(), []
-    for p in pts:
-        k = (p[1], p[2], p[3])
-        if k in seen:
-            continue
-        seen.add(k)
-        uniq.append(p)
-
-    holdout = [p for p in uniq if p[0] == a.holdout] if a.holdout else []
-    train = [p for p in uniq if not (a.holdout and p[0] == a.holdout)]
-
-    m = build(train)
-    print(f"base(util) fitted on {m['base_points']} points at mbt={REF_MBT}, mns={REF_MNS}")
-    print(f"  tokens = {m['slope']:.1f}*util + {m['intercept']:.1f}")
-    print(f"  off_mbt (tokens vs mbt={REF_MBT}): "
-          + ", ".join(f"{k}:{v:+,.0f}" for k, v in sorted(m["off_mbt"].items())))
-    print(f"  off_mns (tokens vs mns={REF_MNS}): "
-          + ", ".join(f"{k}:{v:+,.0f}" for k, v in sorted(m["off_mns"].items())))
-    print()
-    print(f"{'tag':<12}{'util':>6}{'mbt':>6}{'mns':>5}{'measured':>10}{'fitted':>10}{'resid':>9}{'resid %':>9}")
-    worst = 0.0
-    for tag, u, b, s, _, tok in train:
-        f = predict(m, u, b, s)
-        r = tok - f
-        worst = max(worst, abs(r) / tok * 100)
-        print(f"{tag:<12}{u:>6}{b:>6}{s:>5}{tok:>10,}{f:>10,.0f}{r:>+9.0f}{100*r/tok:>+8.3f}%")
-    print(f"\nworst in-sample residual: {worst:.3f}%")
-
-    if holdout:
-        print("\n=== HELD-OUT ===")
-        for tag, u, b, s, _, tok in holdout:
-            f = predict(m, u, b, s)
-            print(f"{tag}: predicted {f:,.0f}  measured {tok:,}  "
-                  f"error {tok-f:+,.0f} tokens ({100*(tok-f)/tok:+.3f}%)")
-
-    m.update({"block_size": a.block_size, "n_points": len(train),
-              "worst_resid_pct": worst,
-              "points": [{"tag": t, "util": u, "mbt": b, "mns": s, "pc": p, "tokens": k}
-                         for t, u, b, s, p, k in train],
-              "holdout": [{"tag": t, "util": u, "mbt": b, "mns": s, "tokens": k,
-                           "predicted": predict(m, u, b, s)}
-                          for t, u, b, s, _, k in holdout]})
+    m = build(a.variant)
+    print(f"variant: {a.variant}")
+    print(f"base(util) on {m['base_points']} reference-shape points: "
+          f"tokens = {m['slope']:.1f}*util + {m['intercept']:.1f}")
+    resid = [(t - (m['slope'] * u + m['intercept']), tag) for tag, u, t in BASE_POINTS]
+    print(f"  worst base residual: {max(abs(r) for r, _ in resid):.0f} tokens")
+    for name, meta in (("off_mbt", m["off_mbt_meta"]), ("off_mns", m["off_mns_meta"])):
+        print(f"\n{name}:")
+        for k, v in sorted(meta.items(), key=lambda kv: int(kv[0])):
+            print(f"  {k:>5}: {v['tokens']:>+7,}  [{v['confidence']:<9}] {v['provenance']}")
     json.dump(m, open(a.out, "w"), indent=2)
     print(f"\nwrote {a.out}")
 

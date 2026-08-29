@@ -35,9 +35,9 @@ def tag_of(util, mns, mbt, pc):
 
 
 def run_one(job):
-    util, mns, mbt, pc, blocks, trace, perf = job
+    util, mns, mbt, pc, blocks, trace, perf, outdir = job
     tag = tag_of(util, mns, mbt, pc)
-    out = os.path.join(OUTDIR, f"sim_{tag}.json")
+    out = os.path.join(outdir, f"sim_{tag}.json")
     cmd = [sys.executable, "-m", "replay_sim.simulator",
            "--trace", trace, "--perf", perf,
            "--num-blocks", str(blocks), "--max-num-seqs", str(mns),
@@ -61,8 +61,9 @@ def main():
     ap.add_argument("--perf", default="results/perf.json")
     ap.add_argument("--pool-model", default="results/pool_model.json")
     ap.add_argument("--out", default="results/sweep/sweep_results.json")
+    ap.add_argument("--outdir", default=OUTDIR)
     a = ap.parse_args()
-    os.makedirs(OUTDIR, exist_ok=True)
+    os.makedirs(a.outdir, exist_ok=True)
 
     pm = json.load(open(a.pool_model))
     bs = pm["block_size"]
@@ -71,9 +72,9 @@ def main():
     for util, mns, mbt, pc in itertools.product(UTILS, MNS, MBT, PC):
         tokens = predict(pm, util, mbt, mns)
         blocks = int(tokens // bs)
-        jobs.append((util, mns, mbt, pc, blocks, a.trace, a.perf))
-    print(f"{len(jobs)} configs; pool model worst residual "
-          f"{pm['worst_resid_pct']:.3f}% over {pm['n_points']} measured points")
+        jobs.append((util, mns, mbt, pc, blocks, a.trace, a.perf, a.outdir))
+    print(f"{len(jobs)} configs; pool variant '{pm['variant']}', "
+          f"base(util) on {pm['base_points']} reference-shape points")
 
     rows, done = [], 0
     with ProcessPoolExecutor(max_workers=a.workers) as ex:

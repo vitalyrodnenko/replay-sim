@@ -206,7 +206,8 @@ def main():
     rows = published_rows()
     D = analysis_D(A, rows)
     E = analysis_E(runs, os.path.join(a.noise_dir, "run_context.csv"))
-    json.dump({"A": A, "B": B, "C": C, "D": D, "E": E,
+    json.dump({"dispersion": A, "bootstrap": B, "repeats": C,
+               "noise_band": D, "drift": E,
                "n_published_rows": len(rows)},
               open(a.out_json, "w"), indent=2, default=float)
     print(f"wrote {a.out_json}")
