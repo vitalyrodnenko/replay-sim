@@ -1,0 +1,21 @@
+{
+  "requests": 182,
+  "ttft_p50_s": 4.808,
+  "ttft_p95_s": 19.865,
+  "e2e_p50_s": 39.708,
+  "e2e_p95_s": 53.091,
+  "throughput_tok_s": 457.0,
+  "makespan_s": 72.9,
+  "gpu_busy_s": 72.8,
+  "gpu_s_per_1k_out_tok": 2.185,
+  "prefix_cache_hit_rate": 0.855,
+  "block_lookup_hit_rate": 0.995,
+  "preemptions": 15,
+  "config": {
+    "num_blocks": 5811,
+    "block_size": 16,
+    "max_num_seqs": 128,
+    "max_batched_tokens": 2048,
+    "prefix_caching": true
+  }
+}
