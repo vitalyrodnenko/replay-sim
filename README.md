@@ -1,3 +1,133 @@
+# replay-sim
+
+**Can an offline simulator predict what a vLLM config change will do to a real GPU
+server — before you run it?**
+
+This repository is the complete, unedited record of eight rounds of trying to answer
+that question against two RTX 4090s. The honest answer so far is **no**: seven
+verdict rounds, seven FAILs. What makes the record worth publishing is *how* it
+fails — the error has been driven from "wrong sign on half the metrics" down to a
+single metric (`ttft_p95`) on a single cohort of requests, with each narrowing step
+pre-registered in git before the confirming benchmark was run.
+
+> **Article:** _link to be added_
+
+---
+
+## The record at a glance
+
+Every round: freeze a prediction, commit it, *then* run the real benchmark. Configs
+that have informed a design change become "in-sample" forever after; only fresh
+**held-out** configs carry a verdict.
+
+| Round | Held-out config(s) | Verdict | What it established |
+|---|---|---|---|
+| [run 1](results/REPORT_run1_v0.md) | — (A/B/C first contact) | **FAIL** 1 of 11 | Aggregates fine, tails bad; **wrong sign** on the KV-pool axis |
+| [run 2](results/REPORT_run2_v02.md) | D, E | **FAIL** 9 of 12 | Scheduler axis clean at 6/6; failure isolates to tail latency on the pool axis |
+| [run 3](results/REPORT_run3_v03.md) | F, G | **FAIL** 10 of 12 | Failure collapses to **one metric**: both misses are `ttft_p95` |
+| [run 4](results/REPORT_run4_v04.md) | — (in-sample, `a` refit) | **FAIL** 10 of 12 | Online refit closed 83% of the e2e deficit — and falsified its own mechanism |
+| [run 5](results/REPORT_run5_v05.md) | H, I | **FAIL** v2 11 of 12 | Criterion v2 adopted between rounds; prediction (iii) falsified *and inverted* |
+| [run 6](results/REPORT_run6_v06.md) | J | **FAIL** v2 5 of 6 | Decode-block caching added; J's `ttft_p95` still +32.5% |
+| [run 7](results/REPORT_run7_v07.md) | K | **FAIL** v2 5 of 6 | Leaf-first eviction added; F moved by **exactly zero** |
+| [run 8a](results/REPORT.md) | — (diagnostic) | *no verdict* | Sim and real tails are the **same requests** — a magnitude bug, not a missing mechanism, localised to one cohort |
+
+`results/REPORT.md` is always the newest report; the `REPORT_run*.md` files are the
+run-by-run record and are never edited after their round closes. The frozen
+predictions live alongside them in `results/PREDICTIONS_run*.md`.
+
+## Method in one paragraph
+
+`calibrate.py` fits a linear step-time model on the target hardware —
+`t = a + b_p·prefill_tokens + b_d·n_decode + c_kv·kv_bytes` — over a grid designed so
+context varies at fixed batch, which keeps `c_kv` identifiable. `simulator.py` then
+replays a synthetic agentic trace (shared system prompt, per-session preamble, growing
+history) through a discrete-event model of vLLM's continuous-batching scheduler, its
+KV block pool, and its refcounted prefix cache with LRU eviction. `bench.py` replays
+the *same* trace against a real vLLM server over HTTP. `compare.py` scores not the
+absolute numbers but the **predicted delta between two configs** against the measured
+delta — because that is the question an operator actually asks ("what happens if I
+turn prefix caching off?"). A row passes under **criterion v1** if the relative delta
+gap is ≤ 15 points; **criterion v2** (adopted in writing between rounds 4 and 5, and
+prospective only) additionally passes a latency row whose absolute prediction error is
+≤ 15%. Both counts are reported for the whole series.
+
+## Reproducing
+
+Requires a CUDA box for `calibrate.py` and `bench.py`; `workload.py`, `simulator.py`
+and `compare.py` are pure Python and run anywhere.
+
+```bash
+# 0. Setup
+python -m venv .venv && source .venv/bin/activate
+pip install vllm httpx numpy
+export MODEL=Qwen/Qwen3-32B-AWQ
+
+# 1. Trace — one trace, used by both the simulator and the real bench
+python -m replay_sim.workload --out results/trace.jsonl \
+    --sessions 24 --turns 8 --rate 1.2
+
+# 2. Calibrate the step-time model on your own hardware (~15-20 min)
+python -m replay_sim.calibrate --model $MODEL --tp 2 --out results/perf.json
+
+# 3. Predict BEFORE running anything for real, and commit the prediction.
+#    Take <N> from the server's own startup log ("# GPU blocks: N") for each
+#    gpu-memory-utilization value rather than guessing it.
+python -m replay_sim.simulator --trace results/trace.jsonl \
+    --perf results/perf.json --num-blocks <N_A> --drop-first 10 \
+    --out results/sim_A.json
+git add results/sim_*.json && git commit -m "PREDICTIONS: frozen before real runs"
+
+# 4. Real run — fresh server per config, then:
+python -m replay_sim.bench --trace results/trace.jsonl --model $MODEL \
+    --drop-first 10 --out results/real_A.json
+
+# 5. Compare: the verdict is on the config-change delta, not absolute values
+python -m replay_sim.compare \
+    --sim results/sim_A.json results/sim_B.json \
+    --real results/real_A.json results/real_B.json --labels A B
+```
+
+`scripts/` holds the exact serve/bench wrappers used for the published runs, and
+`RUNBOOK.md` covers the model- and hardware-specific setup.
+
+## Repository layout
+
+```
+replay_sim/       simulator, calibration, workload generator, bench client,
+                  comparison + verdict scoring, per-request diagnostics
+scripts/          serve / bench / probe wrappers used for the real runs
+results/
+  REPORT*.md      run-by-run reports (REPORT.md = newest)
+  PREDICTIONS_*.md  predictions, frozen and committed before each real run
+  sim_*.json      simulator output      real_*.json  measured output
+  perf.json       fitted step-time model
+  trace.jsonl     the replayed workload
+  logs/           raw server, calibration and benchmark logs, verbatim
+```
+
+## Provenance note
+
+The logs under `results/logs/` are published **verbatim**, exactly as they were
+committed during the runs. They contain machine-local absolute paths
+(`/home/vitaly/...`), the workstation's hostname, and its private LAN address. This is
+deliberate: the reports cite specific commit hashes and quote these logs as evidence,
+and redacting them after the fact would make the published tip inconsistent with the
+record it claims to document. Nothing in them is security-sensitive — the IP is
+RFC1918 (not routable from the internet) and the hostname is a desktop machine. The
+history has been scanned for credentials and contains none.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
+
+---
+
+# Working notes
+
+Everything below is the working README as it evolved during the runs: the per-version
+changelogs, the pre-registered protocols for each round, and the verdict criterion.
+It is preserved unedited because the reports reference it.
+
 # replay-sim v0
 
 Validates the core hypothesis: can an offline replay simulator predict the
