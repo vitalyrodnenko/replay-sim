@@ -1,0 +1,8 @@
+{
+  "median_gap_s": 0.00010000000000000026,
+  "mean_gap_s": 0.0003363636363636364,
+  "min_gap_s": 9.999999999999983e-05,
+  "max_gap_s": 0.002,
+  "n_gaps": 11,
+  "source": "results/run10/dispatch_cal_pr.jsonl, burst trace, instrumentation-only"
+}

@@ -1,0 +1,12 @@
+{"rid": 0, "ttft": 0.3158, "e2e": 6.591, "sent_s": 0.0001, "prompt_len": 700}
+{"rid": 1, "ttft": 1.1709, "e2e": 6.631, "sent_s": 0.0021, "prompt_len": 2600}
+{"rid": 2, "ttft": 1.1706, "e2e": 6.6303, "sent_s": 0.0023, "prompt_len": 700}
+{"rid": 3, "ttft": 2.0185, "e2e": 6.6477, "sent_s": 0.0024, "prompt_len": 2600}
+{"rid": 4, "ttft": 1.1703, "e2e": 6.6305, "sent_s": 0.0025, "prompt_len": 700}
+{"rid": 5, "ttft": 2.8714, "e2e": 6.6646, "sent_s": 0.0026, "prompt_len": 2600}
+{"rid": 6, "ttft": 2.8714, "e2e": 6.6645, "sent_s": 0.0028, "prompt_len": 700}
+{"rid": 7, "ttft": 3.7233, "e2e": 6.6808, "sent_s": 0.0029, "prompt_len": 2600}
+{"rid": 8, "ttft": 3.7237, "e2e": 6.6811, "sent_s": 0.003, "prompt_len": 700}
+{"rid": 9, "ttft": 3.7232, "e2e": 6.6806, "sent_s": 0.0035, "prompt_len": 2600}
+{"rid": 10, "ttft": 3.7227, "e2e": 6.6803, "sent_s": 0.0037, "prompt_len": 700}
+{"rid": 11, "ttft": 4.0724, "e2e": 6.6932, "sent_s": 0.0038, "prompt_len": 2600}
