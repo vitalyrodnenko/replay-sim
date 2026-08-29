@@ -15,7 +15,7 @@ Then:
 """
 import argparse, asyncio, json, time
 
-async def one(client, sem, base, model, r, results):
+async def one(client, sem, base, model, r, results, t_start):
     async with sem:
         body = {
             "model": model, "prompt": r["prompt"],
@@ -23,6 +23,7 @@ async def one(client, sem, base, model, r, results):
             "temperature": 0.0, "stream": True,
         }
         t0 = time.perf_counter()
+        sent_s = t0 - t_start
         ttft = None
         async with client.stream("POST", base + "/v1/completions",
                                  json=body, timeout=600) as resp:
@@ -32,7 +33,7 @@ async def one(client, sem, base, model, r, results):
                     if ttft is None:
                         ttft = time.perf_counter() - t0
         results[r["req_id"]] = {
-            "ttft": ttft, "e2e": time.perf_counter() - t0,
+            "ttft": ttft, "e2e": time.perf_counter() - t0, "sent_s": round(sent_s, 4),
             "prompt_len": r["prompt_len"], "output_len": r["output_len"],
         }
 
@@ -50,7 +51,7 @@ async def run(a):
             if delay > 0:
                 await asyncio.sleep(delay)
             tasks.append(asyncio.create_task(
-                one(client, sem, a.base, a.model, r, results)))
+                one(client, sem, a.base, a.model, r, results, t_start)))
         await asyncio.gather(*tasks)
         makespan = time.perf_counter() - t_start
 
@@ -89,7 +90,7 @@ async def run(a):
             for rid in sorted(results):
                 v = results[rid]
                 f.write(json.dumps({"rid": rid, "ttft": round(v["ttft"],4),
-                    "e2e": round(v["e2e"],4),
+                    "e2e": round(v["e2e"],4), "sent_s": v.get("sent_s"),
                     "prompt_len": v["prompt_len"]}) + "\n")
 
 def main():

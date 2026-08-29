@@ -475,3 +475,58 @@ ask for the current one.
 > perf.json and the canonical trace are byte-identical to run 5. Verified after
 > install: v0.8 is bit-identical to v0.7 on config A over the canonical trace, which is
 > what prediction (v)'s container evidence claims.
+
+# v0.9 changelog (2026-08-29, after run 9)
+
+Single physics change: requests whose final prefill chunk runs in a step
+sample their first token in that same step (vLLM chunked-prefill
+behavior). Through v0.8 the first token arrived one full decode step
+later, a systematic per-request TTFT overcharge that is largest where
+TTFT is small. Container evidence on the burst trace (4090-scale perf):
+level structure 4 -> ~6, first level 0.30 s vs measured 0.32 s.
+
+Harness addition (measurement, not physics): bench.py records sent_s,
+the actual client dispatch offset per request; simulator.py gains
+--dispatch-gap to model the client's sequential HTTP dispatch
+(simultaneous trace arrivals are never simultaneous at the server).
+
+# Run 10 protocol
+
+- Criterion v2 carries verdicts; both counts for series continuity.
+- Step 0, BEFORE predictions: dispatch calibration. One run of the
+  existing burst trace (reals exist; this run is instrumentation-only
+  and does not count) purely to read sent_s spacing from the
+  per-request dump; freeze the measured median gap as the
+  --dispatch-gap constant in PREDICTIONS_run10.md. All burst-family
+  predictions use it; smooth traces (canonical) use gap 0.
+- Pre-registered predictions, frozen with numbers before simulating:
+  (i)   H (in-sample): sim ttft_p95 decreases by at least 5 pt of
+        absolute error and the row passes v2 for the first time;
+  (ii)  F, G, J, K (in-sample): every ttft_p95 absolute error
+        decreases; magnitudes recorded, no pass required;
+  (iii) burst trace (in-sample) with the calibrated dispatch gap:
+        level count 6 +/- 1, max TTFT within 15% of 4.080 s, first
+        level within 25% of 0.320 s;
+  (iv)  coldstart (in-sample): per-request |diff| p95 decreases from
+        587.7 ms; direction only, no threshold;
+  (v)   cost scorecard A-L: every cost gap <= 3 pt.
+- Held-out for the verdict: config M = config A settings on a fresh
+  burst-geometry trace: three prompt sizes (500 / 1500 / 3000 words,
+  equal counts), bursts of 8, one third of the canonical request count
+  (64 requests), committed before predicting. One real run,
+  --per-request. Score vs config A baseline as run 9 did for L.
+- 3x load stays out of scope (envelope defect, pending saturation fix).
+
+> NOTE on this drop-in (run 10, archive replay-sim-v0.9-r1.zip). Taken: simulator.py
+> (v0.9), bench.py (sent_s recording — verified to preserve --drop-first, --per-request
+> and bench.py's percentile estimator), and the two sections above. NOT taken:
+> calibrate.py (the 3,516-byte pre-run-4 file, seventh consecutive time) and
+> workload.py (the pre-fix tok{i} vocabulary, seventh time); neither is in this
+> archive's stated replace list either. The rest of README.md was preserved: the
+> archive omits VERDICT CRITERION v2 for the sixth time, and the Run 10 protocol's own
+> first line reads "Criterion v2 carries verdicts". The published release section was
+> likewise preserved; only the two new sections were merged in.
+>
+> Perf.load's provenance-key tolerance was re-applied for the fifth time; without it
+> v0.9 raises TypeError on run-5 perf.json and cannot run. No physics touched.
+> perf.json and the canonical trace are byte-identical to run 5.

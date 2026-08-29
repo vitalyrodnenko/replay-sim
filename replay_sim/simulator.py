@@ -1,4 +1,4 @@
-"""Trace-driven discrete-event simulator of a vLLM-style engine. v0.8
+"""Trace-driven discrete-event simulator of a vLLM-style engine. v0.9
 
 v0.6: decode-generated full blocks are published to the prefix cache with
 unique content (vLLM caches all full blocks). They earn no hits on this
@@ -41,10 +41,10 @@ class Perf:
     def load(cls, path):
         """Load the four coefficients, ignoring provenance metadata.
 
-        Re-applied on top of the v0.8-r2 drop-in, which reverted it for the
-        fourth time (v0.6, v0.7 and the run-8a diagnostic did too). perf.json
-        has carried "a_source"/"bp_source"/"note"/"online_fit" since run 4 and
-        the plain loader raises TypeError on them. No physics touched.
+        Re-applied on top of the v0.9-r1 drop-in, which reverted it for the
+        fifth time (v0.6, v0.7, run-8a and v0.8 did too). perf.json has carried
+        "a_source"/"bp_source"/"note"/"online_fit" since run 4 and the plain
+        loader raises TypeError on them. No physics touched.
         """
         with open(path) as f:
             d = json.load(f)
@@ -305,11 +305,27 @@ def simulate(trace, cfg: Cfg, perf: Perf):
                             r.pinned.append(h)
                     r.inserted += 1
 
+        # v0.9: requests whose prefill completes in this step sample their
+        # first token in the same step (vLLM chunked-prefill behavior),
+        # not in the next decode step.
+        first_tok = [r for r in running
+                     if r.prefilled >= r.prompt_len and r.generated == 0
+                     and r not in dec_batch]
+
         dt = perf.a + perf.b_p * prefill_tok + perf.b_d * n_dec \
              + perf.c_kv * kv_read / 1e6
         t += dt
         gpu_busy += dt
         steps += 1
+
+        for r in first_tok:
+            if r.ttft < 0:
+                r.ttft = t - r.arrival
+            r.generated = 1
+            if r.generated >= r.output_len:
+                r.finish = t
+                running.remove(r)
+                release(r, keep_cache=True)
 
         finished = []
         for r in dec_batch:
@@ -377,6 +393,10 @@ def main():
     ap.add_argument("--max-num-seqs", type=int, default=128)
     ap.add_argument("--max-batched-tokens", type=int, default=2048)
     ap.add_argument("--no-prefix-caching", action="store_true")
+    ap.add_argument("--dispatch-gap", type=float, default=0.0,
+                    help="minimum inter-arrival spacing (s) modeling the "
+                         "bench client's sequential HTTP dispatch; applied "
+                         "as arr_i = max(arr_i, prev + gap)")
     ap.add_argument("--drop-first", type=int, default=0,
                     help="exclude first N arrivals from summary stats, "
                          "matching bench.py --drop-first (still simulated)")
@@ -386,6 +406,12 @@ def main():
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
     trace = [json.loads(l) for l in open(a.trace)]
+    if a.dispatch_gap > 0:
+        trace.sort(key=lambda r: (r["arrival_s"], r["req_id"]))
+        prev = -1e9
+        for r in trace:
+            r["arrival_s"] = max(r["arrival_s"], prev + a.dispatch_gap)
+            prev = r["arrival_s"]
     perf = Perf.load(a.perf) if a.perf else Perf()
     cfg = Cfg(block_size=a.block_size, num_blocks=a.num_blocks,
               max_num_seqs=a.max_num_seqs,
