@@ -1,0 +1,124 @@
+{
+  "jitter": [
+    {
+      "seed": 0,
+      "ttft_p95_s": 0.972,
+      "e2e_p95_s": 7.418,
+      "throughput_tok_s": 204.3
+    },
+    {
+      "seed": 1,
+      "ttft_p95_s": 1.004,
+      "e2e_p95_s": 7.436,
+      "throughput_tok_s": 204.3
+    },
+    {
+      "seed": 2,
+      "ttft_p95_s": 0.976,
+      "e2e_p95_s": 7.455,
+      "throughput_tok_s": 204.3
+    },
+    {
+      "seed": 3,
+      "ttft_p95_s": 0.976,
+      "e2e_p95_s": 7.457,
+      "throughput_tok_s": 204.3
+    },
+    {
+      "seed": 4,
+      "ttft_p95_s": 0.941,
+      "e2e_p95_s": 7.44,
+      "throughput_tok_s": 204.3
+    },
+    {
+      "seed": 5,
+      "ttft_p95_s": 0.933,
+      "e2e_p95_s": 7.437,
+      "throughput_tok_s": 204.3
+    },
+    {
+      "seed": 6,
+      "ttft_p95_s": 0.932,
+      "e2e_p95_s": 7.473,
+      "throughput_tok_s": 204.3
+    },
+    {
+      "seed": 7,
+      "ttft_p95_s": 0.989,
+      "e2e_p95_s": 7.429,
+      "throughput_tok_s": 204.3
+    },
+    {
+      "seed": 8,
+      "ttft_p95_s": 0.925,
+      "e2e_p95_s": 7.431,
+      "throughput_tok_s": 204.3
+    },
+    {
+      "seed": 9,
+      "ttft_p95_s": 0.923,
+      "e2e_p95_s": 7.444,
+      "throughput_tok_s": 204.3
+    },
+    {
+      "seed": 10,
+      "ttft_p95_s": 0.929,
+      "e2e_p95_s": 7.418,
+      "throughput_tok_s": 204.3
+    },
+    {
+      "seed": 11,
+      "ttft_p95_s": 0.983,
+      "e2e_p95_s": 7.448,
+      "throughput_tok_s": 204.3
+    },
+    {
+      "seed": 12,
+      "ttft_p95_s": 0.925,
+      "e2e_p95_s": 7.462,
+      "throughput_tok_s": 204.3
+    },
+    {
+      "seed": 13,
+      "ttft_p95_s": 0.926,
+      "e2e_p95_s": 7.465,
+      "throughput_tok_s": 204.3
+    },
+    {
+      "seed": 14,
+      "ttft_p95_s": 0.982,
+      "e2e_p95_s": 7.435,
+      "throughput_tok_s": 204.3
+    },
+    {
+      "seed": 15,
+      "ttft_p95_s": 0.927,
+      "e2e_p95_s": 7.436,
+      "throughput_tok_s": 204.3
+    },
+    {
+      "seed": 16,
+      "ttft_p95_s": 0.971,
+      "e2e_p95_s": 7.419,
+      "throughput_tok_s": 204.3
+    },
+    {
+      "seed": 17,
+      "ttft_p95_s": 0.925,
+      "e2e_p95_s": 7.421,
+      "throughput_tok_s": 204.3
+    },
+    {
+      "seed": 18,
+      "ttft_p95_s": 0.922,
+      "e2e_p95_s": 7.441,
+      "throughput_tok_s": 204.3
+    },
+    {
+      "seed": 19,
+      "ttft_p95_s": 0.934,
+      "e2e_p95_s": 7.437,
+      "throughput_tok_s": 204.3
+    }
+  ]
+}
