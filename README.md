@@ -396,3 +396,82 @@ re-simulate the four with --per-request, then diagnose each pair.
 > simulator.py was verified to differ from the installed v0.7 only by the
 > --per-request dump code (plus Perf.load's provenance tolerance, which the
 > archive reverted again and which was re-applied). No physics change.
+
+# v0.8 changelog (2026-08-29, after the burst probe and LOAD_REPORT)
+
+Single change: streaming cache consumption. Before charging each prefill
+chunk, a request sitting on a block boundary re-matches its next blocks
+against the cache and consumes any published since its admission,
+instead of recomputing them. Matching remained admission-only through
+v0.7, so simultaneous arrivals could never share an in-flight prefix:
+the burst probe measured the consequence as a uniform 2x TTFT
+overcharge (sim 8.25 s vs real 4.08 s on the 12-request burst).
+Container check: the fix removes a 2.03x factor on the same trace.
+
+# Run 9 protocol
+
+- Criterion v2 carries verdicts; both counts for series continuity.
+- Pre-registered predictions, frozen with numbers before simulating:
+  (i)   burst trace (in-sample now): sim max TTFT falls ~2x and lands
+        within 15% of 4.08 s; the 6-level step structure survives;
+  (ii)  config H (in-sample): ttft_p95 error moves from +20.3% toward
+        zero and the row passes v2 for the first time;
+  (iii) coldstart trace (in-sample): the mirrored per-request pairs
+        from COLDSTART_REPORT align; per-request |diff| p95 < 100 ms;
+  (iv)  config J (in-sample): across 20 sim runs with arrival jitter
+        +/-25 ms (documented seeds), record the simulated ttft_p95
+        distribution against the two measured modes. PRE-REGISTERED
+        EXPECTATION: this FAILS as a mode-reproduction test. A container
+        dry-run (16 jittered sims at 4090-scale step costs, pressure-
+        zone pools) produced a clustered continuum with ~9% spread and
+        no discrete gap, so ordering alone is not expected to express
+        bimodality. If both modes DO appear, that exceeds the recorded
+        expectation and is the finding;
+  (v)   configs A-K cost scorecard: unchanged within noise (every cost
+        gap <= 3 pt). Container evidence: on the canonical trace v0.8
+        is bit-identical to v0.7 at 1x and 2x load (re-match never
+        fires without overlapping same-prefix prefills) and shifts 3x
+        by +0.8% throughput / -5% ttft_p95, slightly worsening the
+        known saturation optimism there. 3x remains out of scope.
+- Held-out trace generation: workload.py now has --bursty (Poisson
+  bursts of 4-6 near-simultaneous arrivals, same request count and
+  span). Config L = config A settings on a fresh --bursty trace.
+- Held-out for the verdict: config L = canonical config A settings on a
+  fresh BURSTY trace (new generator flag: Poisson bursts of 4-6
+  requests, same sessions/turns totals; commit generator change and
+  trace before predicting). One real run.
+- The 3x load point stays out of scope: it is an envelope defect
+  (saturation cost), not an ordering defect, and gets its own round
+  after the saturation calibration probe.
+
+---
+
+# BUILD STAMP
+Archive: replay-sim-v0.8-r2.zip, built 2026-08-29 (day session).
+Supersedes any earlier v08 archive. Verification line for the correct
+build: the run-9 protocol below must contain the phrase
+"PRE-REGISTERED EXPECTATION: this FAILS" and workload.py must accept
+--bursty. If either is missing, you have the stale archive: stop and
+ask for the current one.
+
+> NOTE on this drop-in (run 9, archive replay-sim-v0.8-r2.zip). Taken: simulator.py
+> (v0.8), the --bursty logic in workload.py, and the three sections above. NOT taken:
+>
+> - **calibrate.py** — the archive shipped the 3,516-byte pre-run-4 file for the sixth
+>   consecutive time, against the 23,319-byte installed one carrying the online modes.
+> - **workload.py's vocabulary** — the archive shipped `VOCAB = [f"tok{i}" for i in
+>   range(512)]`, the pristine pre-fix list, for the sixth consecutive time. That
+>   vocabulary tokenises at 3.78 tok/word on this tokenizer, so `prompt_len` would stop
+>   equalling the token count and the 16-token block alignment the whole prefix-cache
+>   simulation rests on would break. The validated vocabulary (commits f3b598b,
+>   80feb97) was kept; the archive's `--bursty` logic was taken unmodified.
+> - **the rest of README.md** — the archive's README omits VERDICT CRITERION v2 for the
+>   fifth time, and the Run 9 protocol's own first line reads "Criterion v2 carries
+>   verdicts". It also omits the public release section. Both preserved; only the three
+>   new sections were merged in.
+>
+> Perf.load's provenance-key tolerance was re-applied for the fourth time; without it
+> v0.8 raises TypeError on run-5 perf.json and cannot run at all. No physics touched.
+> perf.json and the canonical trace are byte-identical to run 5. Verified after
+> install: v0.8 is bit-identical to v0.7 on config A over the canonical trace, which is
+> what prediction (v)'s container evidence claims.

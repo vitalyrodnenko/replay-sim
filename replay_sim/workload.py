@@ -14,10 +14,6 @@ For the real vLLM run we also emit prompt text built from a fixed vocabulary
 """
 import argparse, hashlib, json, random
 
-# 512 words that encode to exactly one token each under the TARGET model's
-# tokenizer (Qwen/Qwen3-32B-AWQ), both space-prefixed (mid-prompt) and bare
-# (first word of a prompt), so prompt_len (words) equals the token count the
-# engine actually sees, exactly and per-prompt -- not just on average.
 # Prefix caching operates on exact 16-token blocks, so per-prompt drift would
 # misalign the simulator's block hashes against the engine's.
 # History: the shipped "tok0".."tok511" vocabulary tokenized at 3.78 tok/word
@@ -95,11 +91,16 @@ VOCAB = [
     'weit', 'wget', 'white', 'wife', 'wine', 'wish', 'wolf', 'worked',
     'worthy', 'writers', 'xmin', 'yards', 'ymax',
 ]
+# NOTE: the v0.8-r2 archive shipped VOCAB = [f"tok{i}"...] again,
+# the pristine pre-fix vocabulary. Restored from the installed file:
+# see commits f3b598b and 80feb97. The --bursty logic below is the
+# archive's, unmodified.
 
 def words(rng, n):
     return [VOCAB[rng.randrange(len(VOCAB))] for _ in range(n)]
 
-def gen(seed, sessions, turns, sys_len, turn_user, turn_growth, out_mean, rate):
+def gen(seed, sessions, turns, sys_len, turn_user, turn_growth, out_mean, rate,
+        bursty=False, burst_min=4, burst_max=6):
     rng = random.Random(seed)
     reqs = []
     t = 0.0
@@ -115,8 +116,20 @@ def gen(seed, sessions, turns, sys_len, turn_user, turn_growth, out_mean, rate):
     order.sort(key=lambda x: x[1])  # turns roughly in order, sessions interleaved
     histories = {s: [] for s in range(sessions)}
     rid = 0
+    # bursty mode: requests arrive in Poisson-spaced bursts of burst_min..max,
+    # near-simultaneous within a burst. Same request count and roughly the
+    # same span as the smooth trace at the same rate.
+    burst_left = 0
     for (s, k) in order:
-        t += rng.expovariate(rate)
+        if bursty:
+            if burst_left <= 0:
+                burst_left = rng.randint(burst_min, burst_max)
+                t += rng.expovariate(rate / ((burst_min + burst_max) / 2))
+            else:
+                t += rng.uniform(0.01, 0.05)
+            burst_left -= 1
+        else:
+            t += rng.expovariate(rate)
         user = words(rng, turn_user + k * turn_growth)
         prompt_words = shared_sys + per_session[s] + histories[s] + user
         out_len = max(8, int(rng.gauss(out_mean, out_mean * 0.3)))
@@ -142,9 +155,11 @@ def main():
     ap.add_argument("--turn-growth", type=int, default=20)
     ap.add_argument("--out-mean", type=int, default=180)
     ap.add_argument("--rate", type=float, default=1.2, help="arrivals per second")
+    ap.add_argument("--bursty", action="store_true",
+                    help="Poisson-spaced bursts of 4-6 near-simultaneous arrivals")
     a = ap.parse_args()
     reqs = gen(a.seed, a.sessions, a.turns, a.sys_len, a.turn_user,
-               a.turn_growth, a.out_mean, a.rate)
+               a.turn_growth, a.out_mean, a.rate, bursty=a.bursty)
     with open(a.out, "w") as f:
         for r in reqs:
             f.write(json.dumps(r) + "\n")

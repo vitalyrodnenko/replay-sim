@@ -1,4 +1,4 @@
-"""Trace-driven discrete-event simulator of a vLLM-style engine. v0.7
+"""Trace-driven discrete-event simulator of a vLLM-style engine. v0.8
 
 v0.6: decode-generated full blocks are published to the prefix cache with
 unique content (vLLM caches all full blocks). They earn no hits on this
@@ -41,10 +41,10 @@ class Perf:
     def load(cls, path):
         """Load the four coefficients, ignoring provenance metadata.
 
-        Re-applied on top of the run-8a diagnostic drop-in, which reverted it
-        for the third time (v0.6 and v0.7 did too). perf.json has carried
-        "a_source"/"bp_source"/"note"/"online_fit" since run 4 and the plain
-        loader raises TypeError on them. No physics touched.
+        Re-applied on top of the v0.8-r2 drop-in, which reverted it for the
+        fourth time (v0.6, v0.7 and the run-8a diagnostic did too). perf.json
+        has carried "a_source"/"bp_source"/"note"/"online_fit" since run 4 and
+        the plain loader raises TypeError on them. No physics touched.
         """
         with open(path) as f:
             d = json.load(f)
@@ -266,6 +266,26 @@ def simulate(trace, cfg: Cfg, perf: Perf):
             if budget <= 0:
                 break
             if r.prefilled < r.prompt_len:
+                # v0.8: streaming re-match. If prefill sits on a block
+                # boundary, blocks published by concurrent requests since
+                # this one was admitted are consumed instead of recomputed.
+                if cfg.prefix_caching:
+                    while (r.prefilled % bs == 0):
+                        bi = r.prefilled // bs
+                        if bi >= len(r.hashes):
+                            break
+                        if r.prefilled + bs > r.prompt_len - 1:
+                            break
+                        h = r.hashes[bi]
+                        if h in r.pinned or not cache.pin_existing(h):
+                            break
+                        r.pinned.append(h)
+                        r.prefilled += bs
+                        r.cached += bs
+                        r.alloc = max(0, r.alloc - 1)
+                        r.inserted = max(r.inserted, bi + 1)
+                if r.prefilled >= r.prompt_len:
+                    continue
                 chunk = min(budget, r.prompt_len - r.prefilled)
                 r.prefilled += chunk
                 prefill_tok += chunk
