@@ -134,3 +134,63 @@ wrong. The output is an error bar the series has never had.
 - `results/noise/real_<cfg>_<rep>.json` — per-run summary.
 - `results/noise/queue_log.txt` — one line per attempt: outcome, timings, retries.
 - `results/thermal/` — night-long and per-run `nvidia-smi` samples.
+
+---
+
+# AMENDMENT — recorded 2026-08-29 ~01:10, before any counted repeat was run
+
+Between writing the plan and starting the queue, probing the KV pool for the config
+sweep turned up something that forces three changes here. Recording them in writing,
+before the run, with motivation — the same discipline the series uses for the verdict
+criterion.
+
+## What was found
+
+Booting the *same* settings twice gave two different KV pools:
+
+    util 0.85, mbt 2048, mns 64  ->  82,656 tokens   (first ever boot of that shape)
+    util 0.85, mbt 2048, mns 64  ->  87,680 tokens   (second boot, same settings)
+
+A 5,024-token (6.1%) difference from nothing but a repeated boot. Across eight probes
+the pattern is consistent: **the first boot of a given (mbt, mns) shape is granted
+roughly 5,000 fewer tokens than later boots of that same shape**, which points at
+compile/CUDA-graph cache state at profiling time rather than at the config.
+
+This matters here for one specific reason: **config A and config J differ by 5,776
+tokens of pool (87,200 vs 81,424)**. The artifact is the same size as the effect. A
+short-pool boot of A is nearly indistinguishable from a healthy boot of J, so if it
+went unnoticed it would land in the A–J contrast as "benchmark noise" and this report
+would be wrong in exactly the direction it is trying to measure.
+
+`scripts/stop_server.sh` returns as soon as total VRAM is under 1500 MiB. On this box
+~1,281 MiB of residue is worth ~5,000 KV tokens, so the default drain is not tight
+enough to guarantee a clean boot either.
+
+## Changes, and why
+
+1. **Strict VRAM drain before every boot.** Wait until total VRAM is under 450 MiB
+   (the idle floor with the desktop session is 255 MiB) rather than accepting the
+   1500 MiB default. A boot that cannot reach it is not benchmarked.
+2. **The granted pool is asserted, not just recorded.** A boot whose
+   `GPU KV cache size` is not exactly the config's published value (A 87,200,
+   J 81,424) is rejected as dirty and retried, and every occurrence is logged with
+   its pre-boot VRAM. Such a boot is not measuring the config it claims to.
+   Configs A and J both use the long-warmed (mbt 2048, mns 128) shape, so this
+   should be rare; if it is not, that is itself the finding and the report says so.
+3. **One discarded warm-up run** (config A, tagged `A_00`) before the counted
+   repeats. It enters no statistic. Without it the only run of the night with a cold
+   page cache and idle-temperature GPUs is repeat 1 of config A, which would appear
+   in Analysis E as drift that is really a cold start.
+
+## Not changed
+
+The measured quantity, the six metrics, the percentile estimator, the 14×2
+alternating design, the no-outlier-rejection rule, and analyses A–E are all exactly
+as pre-registered above. The robustness work done at the same time (wall-clock
+timeout on the bench step, a global deadline, a consecutive-failure breaker,
+attempt-scoped staging so a rejected attempt can never be promoted, and a
+single-instance lock) changes no measurement — it only stops a wedged run from
+silently becoming data or eating the night.
+
+**These pool findings are reported in NOISE_REPORT.md as an unplanned observation,
+clearly labelled, and they do not re-score anything.**

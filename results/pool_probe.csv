@@ -1,0 +1,9 @@
+tag,util,mbt,mns,pc,tokens,status
+p_u065,0.65,2048,128,on,48672,OK
+p_mbt1024,0.85,1024,128,on,82256,OK
+p_mbt4096,0.85,4096,128,on,82016,OK
+p_mns16,0.85,2048,16,on,82816,OK
+p_mns64,0.85,2048,64,on,82656,OK
+p_holdout,0.70,4096,64,on,53600,OK
+p_repeat_A,0.85,2048,128,on,87200,OK
+p_repeat_mns64,0.85,2048,64,on,87680,OK

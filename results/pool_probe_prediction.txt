@@ -1,0 +1,13 @@
+Pool-model held-out prediction, recorded BEFORE the confirming probe was run.
+Model: tokens = base(util) + off_mbt[mbt] + off_mns[mns], all terms measured.
+Fitted on 15 measured points (10 published series + 5 probes of 2026-08-28).
+
+Held-out point: util 0.70, mbt 4096, mns 64, prefix caching on
+  additive model predicts      48,577 tokens  (3,036 blocks)
+  a single "mode switch" would 53,121 tokens
+  base(0.70) with no penalty   58,304 tokens
+The three hypotheses are ~4,500 tokens apart, so the probe discriminates.
+
+Also probed for determinism (same settings, fresh boot):
+  util 0.85, mbt 2048, mns 128 -> expect 87,200 if the pool is boot-deterministic
+  util 0.85, mbt 2048, mns  64 -> expect 82,656 (reproducing the odd value)
