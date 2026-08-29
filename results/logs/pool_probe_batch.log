@@ -1,0 +1,10 @@
+PROBE p_u065 (util=0.65 mbt=2048 mns=128 pc=on): 48672 tokens
+PROBE p_mbt1024 (util=0.85 mbt=1024 mns=128 pc=on): 82256 tokens
+PROBE p_mbt4096 (util=0.85 mbt=4096 mns=128 pc=on): 82016 tokens
+PROBE p_mns16 (util=0.85 mbt=2048 mns=16 pc=on): 82816 tokens
+PROBE p_mns64 (util=0.85 mbt=2048 mns=64 pc=on): 82656 tokens
+PROBES_1_5_DONE
+PROBE p_holdout (util=0.70 mbt=4096 mns=64 pc=on): 53600 tokens
+PROBE p_repeat_A (util=0.85 mbt=2048 mns=128 pc=on): 87200 tokens
+PROBE p_repeat_mns64 (util=0.85 mbt=2048 mns=64 pc=on): 87680 tokens
+PROBES_6_8_DONE

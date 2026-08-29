@@ -1,0 +1,143 @@
+{
+  "top1": {
+    "label": "rank 1",
+    "metrics": {
+      "ttft_p50_s": {
+        "sweep": 0.227,
+        "sim_actual": 0.227,
+        "measured": 0.248,
+        "err_sweep_pct": -8.467741935483868,
+        "err_actual_pct": -8.467741935483868
+      },
+      "ttft_p95_s": {
+        "sweep": 0.652,
+        "sim_actual": 0.652,
+        "measured": 0.559,
+        "err_sweep_pct": 16.636851520572446,
+        "err_actual_pct": 16.636851520572446
+      },
+      "e2e_p50_s": {
+        "sweep": 4.494,
+        "sim_actual": 4.494,
+        "measured": 4.762,
+        "err_sweep_pct": -5.627887442251152,
+        "err_actual_pct": -5.627887442251152
+      },
+      "e2e_p95_s": {
+        "sweep": 6.557,
+        "sim_actual": 6.557,
+        "measured": 7.217,
+        "err_sweep_pct": -9.14507413052514,
+        "err_actual_pct": -9.14507413052514
+      },
+      "throughput_tok_s": {
+        "sweep": 209.4,
+        "sim_actual": 209.4,
+        "measured": 209.2,
+        "err_sweep_pct": 0.09560229445507508,
+        "err_actual_pct": 0.09560229445507508
+      },
+      "prefix_cache_hit_rate": {
+        "sweep": 0.862,
+        "sim_actual": 0.862,
+        "measured": 0.862,
+        "err_sweep_pct": 0.0,
+        "err_actual_pct": 0.0
+      }
+    }
+  },
+  "top2": {
+    "label": "rank 2",
+    "metrics": {
+      "ttft_p50_s": {
+        "sweep": 0.227,
+        "sim_actual": 0.227,
+        "measured": 0.247,
+        "err_sweep_pct": -8.09716599190283,
+        "err_actual_pct": -8.09716599190283
+      },
+      "ttft_p95_s": {
+        "sweep": 0.652,
+        "sim_actual": 0.652,
+        "measured": 0.536,
+        "err_sweep_pct": 21.641791044776117,
+        "err_actual_pct": 21.641791044776117
+      },
+      "e2e_p50_s": {
+        "sweep": 4.494,
+        "sim_actual": 4.494,
+        "measured": 4.754,
+        "err_sweep_pct": -5.469078670593181,
+        "err_actual_pct": -5.469078670593181
+      },
+      "e2e_p95_s": {
+        "sweep": 6.557,
+        "sim_actual": 6.557,
+        "measured": 7.205,
+        "err_sweep_pct": -8.993754337265782,
+        "err_actual_pct": -8.993754337265782
+      },
+      "throughput_tok_s": {
+        "sweep": 209.4,
+        "sim_actual": 209.4,
+        "measured": 209.2,
+        "err_sweep_pct": 0.09560229445507508,
+        "err_actual_pct": 0.09560229445507508
+      },
+      "prefix_cache_hit_rate": {
+        "sweep": 0.862,
+        "sim_actual": 0.862,
+        "measured": 0.862,
+        "err_sweep_pct": 0.0,
+        "err_actual_pct": 0.0
+      }
+    }
+  },
+  "ctrl": {
+    "label": "rank 21 control",
+    "metrics": {
+      "ttft_p50_s": {
+        "sweep": 0.231,
+        "sim_actual": 0.231,
+        "measured": 0.25,
+        "err_sweep_pct": -7.599999999999996,
+        "err_actual_pct": -7.599999999999996
+      },
+      "ttft_p95_s": {
+        "sweep": 0.929,
+        "sim_actual": 0.934,
+        "measured": 0.799,
+        "err_sweep_pct": 16.270337922403,
+        "err_actual_pct": 16.896120150187734
+      },
+      "e2e_p50_s": {
+        "sweep": 4.614,
+        "sim_actual": 4.614,
+        "measured": 4.848,
+        "err_sweep_pct": -4.826732673267326,
+        "err_actual_pct": -4.826732673267326
+      },
+      "e2e_p95_s": {
+        "sweep": 7.252,
+        "sim_actual": 7.421,
+        "measured": 7.9,
+        "err_sweep_pct": -8.202531645569627,
+        "err_actual_pct": -6.063291139240507
+      },
+      "throughput_tok_s": {
+        "sweep": 205.1,
+        "sim_actual": 204.8,
+        "measured": 204.5,
+        "err_sweep_pct": 0.2933985330073322,
+        "err_actual_pct": 0.14669926650367304
+      },
+      "prefix_cache_hit_rate": {
+        "sweep": 0.845,
+        "sim_actual": 0.844,
+        "measured": 0.844,
+        "err_sweep_pct": 0.118483412322275,
+        "err_actual_pct": 0.0
+      }
+    }
+  }
+}

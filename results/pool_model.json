@@ -1,0 +1,64 @@
+{
+  "slope": 192635.91640466065,
+  "intercept": -76541.32199001298,
+  "variant": "measured",
+  "off_mbt": {
+    "1024": -4944,
+    "2048": 0,
+    "4096": -5184,
+    "8192": -4944
+  },
+  "off_mns": {
+    "16": 700,
+    "32": 640,
+    "64": 480,
+    "128": 0
+  },
+  "off_mbt_meta": {
+    "1024": {
+      "tokens": -4944,
+      "confidence": "SINGLE",
+      "provenance": "p_mbt1024 tonight, one boot"
+    },
+    "2048": {
+      "tokens": 0,
+      "confidence": "CONFIRMED",
+      "provenance": "reference shape, booted dozens of times in the series"
+    },
+    "4096": {
+      "tokens": -5184,
+      "confidence": "SINGLE",
+      "provenance": "p_mbt4096 tonight, one boot"
+    },
+    "8192": {
+      "tokens": -4944,
+      "confidence": "CONFIRMED",
+      "provenance": "G at util 0.85 (-4,944) and I at util 0.78 (-4,947), agree to 3 tokens"
+    }
+  },
+  "off_mns_meta": {
+    "16": {
+      "tokens": 700,
+      "confidence": "ESTIMATED",
+      "provenance": "no clean measurement; extrapolated from 32:+640, 64:+480, 128:0"
+    },
+    "32": {
+      "tokens": 640,
+      "confidence": "PUBLISHED",
+      "provenance": "config D, run 2"
+    },
+    "64": {
+      "tokens": 480,
+      "confidence": "SINGLE",
+      "provenance": "p_repeat_mns64 (87,680); the earlier p_mns64 boot gave 82,656"
+    },
+    "128": {
+      "tokens": 0,
+      "confidence": "CONFIRMED",
+      "provenance": "reference shape"
+    }
+  },
+  "block_size": 16,
+  "base_points": 8,
+  "irreproducibility_tokens": 5024
+}
