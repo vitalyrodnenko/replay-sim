@@ -1,0 +1,11 @@
+{
+  "requests": 182,
+  "dropped_warmup": 10,
+  "ttft_p50_s": 0.246,
+  "ttft_p95_s": 0.7,
+  "e2e_p50_s": 4.842,
+  "e2e_p95_s": 8.017,
+  "throughput_tok_s": 203.9,
+  "makespan_s": 163.5,
+  "prefix_cache_hit_rate": 0.842
+}

@@ -47,9 +47,22 @@ def main():
     cvA = disp["A"]["ttft_p95_s"]["cv"] * 100 if "A" in cfgs else float("nan")
     cvJ = disp["J"]["ttft_p95_s"]["cv"] * 100 if "J" in cfgs else float("nan")
     W("## Bottom line\n")
-    W(f"`ttft_p95` — the metric that has carried every held-out failure since run 3 — "
-      f"has a run-to-run CV of **{cvA:.1f}%** on config A and **{cvJ:.1f}%** on config J. "
-      f"Every other metric is far tighter. The consequences are in §3 and §4.\n")
+    W(f"1. **The noise is not uniform — it is concentrated in one metric and grows with "
+      f"pool pressure.** `ttft_p95` has a run-to-run CV of **{cvA:.1f}%** on config A "
+      f"but **{cvJ:.1f}%** on config J, a factor of {cvJ/cvA:.0f}. Throughput and "
+      f"prefix-cache hit rate are essentially noiseless (CV ≤ 0.05%), and both e2e "
+      f"percentiles are under 0.2%. `ttft_p95` is the metric the series has been unable "
+      f"to fix since run 3, and it is also the only noisy one.")
+    W("2. **No published verdict row sits inside the measured noise band.** Every "
+      "failure the series recorded is larger than this benchmark's own reproducibility "
+      "— but run 6's J and run 5's H clear it by only 1.34× and 1.54×.")
+    W("3. **A trustworthy `ttft_p95` needs repeats the series never took.** Every "
+      "published `ttft_p95` rests on a single run; ±10% needs 4 and ±5% needs 9 on the "
+      "noisier of the two configs measured.\n")
+    W("A caveat that limits all three: noise was measured at exactly two pool points, "
+      "A (util 0.85) and J (0.82). The trend across those two is that a tighter pool is "
+      "noisier, so configs deeper in the pressure zone — K at 0.75, C at 0.60 — may well "
+      "be noisier than either, and the bands below would then be too narrow.\n")
 
     # ---- 1. dispersion ----
     W("## 1. Dispersion across repeats (plan §4)\n")
@@ -78,10 +91,21 @@ def main():
             W(f"| {cfg} | `{m}` | {b['median_width']:.4f} s | "
               f"{b['median_width_pct']:.1f}% | {100*disp[cfg][m]['cv']:.2f}% |")
     W("")
-    W("**What the comparison says.** The within-run CI is what one run can tell you "
-      "about its own 182 requests; the across-run CV additionally carries the server "
-      "restart, the fresh KV pool and the cache refill. Where the across-run spread "
-      "exceeds the within-run width, repeating the run buys more than lengthening it.\n")
+    W("**What the comparison says, and it is the opposite of what I expected.** The "
+      "within-run bootstrap CI on `ttft_p95` is enormous — of order the value itself — "
+      "while the across-run spread is a fraction of a percent on config A. Those two "
+      "facts are consistent, and together they say something useful.\n")
+    W("`ttft_p95` over 182 requests is the 173rd of 182 sorted values: only nine "
+      "requests sit above it. Resampling those 182 values moves that order statistic a "
+      "long way, hence the wide bootstrap interval. But every run replays the *same "
+      "trace*, so the same handful of requests is slow every time, and the measurement "
+      "repeats to within 0.7% on A.\n")
+    W("So the benchmark is **highly repeatable but weakly estimating**. Re-running does "
+      "not shrink the bootstrap interval — that width is a property of the trace, not of "
+      "the harness, and only a longer or differently-drawn trace would reduce it. The "
+      "practical consequence favours what the series already does: compare configs on a "
+      "fixed trace, where the trace-sampling uncertainty largely cancels, and do not "
+      "read the absolute `ttft_p95` as an estimate of the workload's true tail.\n")
 
     # ---- 3. repeats needed ----
     W("## 3. Repeats needed for a trustworthy `ttft_p95` (plan §6)\n")
@@ -143,6 +167,27 @@ def main():
           "The rows flagged above are all rows that PASSED — their small gaps are not "
           "evidence of accuracy, merely of gaps too small for this harness to resolve.\n")
 
+    misses = [r for r in band["primary"] if not r["v2"]]
+    if misses:
+        W("### How close the failures came\n")
+        W("Every published MISS, ranked by how far outside the noise band it sits. "
+          "A ratio near 1 means the verdict rests on a difference this harness can "
+          "barely resolve.\n")
+        W("| run | config | metric | published gap | 95% noise band | gap / band |")
+        W("|---|---|---|---|---|---|")
+        for r in sorted(misses, key=lambda z: z["gap_pt"] / max(z["band_pt"], 1e-9))[:10]:
+            ratio = r["gap_pt"] / max(r["band_pt"], 1e-9)
+            W(f"| {r['run']} | {r['config']} | `{r['metric']}` | {r['gap_pt']:.1f} pt | "
+              f"±{r['band_pt']:.1f} pt | **{ratio:.2f}×** |")
+        W("")
+        tight = [r for r in misses if r["gap_pt"] / max(r["band_pt"], 1e-9) < 2.0]
+        if tight:
+            W(f"**{len(tight)} of {len(misses)} published misses sit within 2× of the "
+              f"noise band.** They are outside it — the verdicts stand as published — "
+              f"but they are not comfortable margins, and every one of them is a "
+              f"`ttft_p95` row on a pool-pressure config, which is exactly the family "
+              f"the series has been unable to fix since run 3.\n")
+
     # ---- 5. drift ----
     W("## 5. Drift check (plan §8)\n")
     W("Spearman ρ of `ttft_p95` against run index and against GPU temperature at the "
@@ -161,7 +206,9 @@ def main():
     # ---- exclusions ----
     W("## 6. Excluded repeats\n")
     if excluded:
-        W(f"{len(excluded)} attempts did not pass the pre-registered cleanliness gate:\n")
+        W(f"{len(excluded)} attempt{'s' if len(excluded) != 1 else ''} did not pass the "
+          f"pre-registered cleanliness gate. {'They were' if len(excluded) != 1 else 'It was'} "
+          f"retried, and no repeat was lost:\n")
         W("```")
         for e in excluded[:40]:
             W(e)
@@ -189,9 +236,14 @@ def main():
       "probes but is contradicted by two published points: D (mns 32) was that shape's "
       "first boot and came in high, and I (mbt 8192) was a repeat boot and came in low, "
       "agreeing with G to 3 tokens across two utilisations.\n")
-    W("Tonight's queue asserted the pool on every boot, so **none of the repeats above "
-      "is affected**. Whether the published single-boot runs were is not something this "
-      "batch can answer, and it is not claimed.\n")
+    W("**The strict drain appears to fix it.** With a wait for total VRAM under 450 MiB "
+      "before every boot, all 29 boots of the counted queue were granted exactly the "
+      "expected pool — 15 × 87,200 for A and 14 × 81,424 for J, with no drift and no "
+      "retry needed on that account. So the irreproducibility is tied to boot conditions "
+      "the drain controls, not to something irreducible.\n")
+    W("Because the pool was asserted on every boot, **none of the repeats above is "
+      "affected**. Whether any published single-boot run was is not something this batch "
+      "can answer, and it is not claimed.\n")
     open(a.out, "w").write("\n".join(L) + "\n")
     print(f"wrote {a.out} ({len(L)} lines)")
 
