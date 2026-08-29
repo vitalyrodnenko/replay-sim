@@ -131,6 +131,26 @@ def main():
     W("")
 
     # ---- all six metrics ----
+    means = {c: all_disp[c]["ttft_p95_s"]["mean"] for c in order}
+    cvs = {c: all_disp[c]["ttft_p95_s"]["cv"] for c in order}
+    loud = max(order, key=lambda c: cvs[c])
+    quiet = min(order, key=lambda c: cvs[c])
+    W("### What the curve shows\n")
+    W(f"**It is not monotone.** The two configs under the most pool pressure, C "
+      f"(util 0.60) and K (0.75), are the *quietest* of the four at {100*cvs['C']:.2f}% "
+      f"and {100*cvs['K']:.2f}% — quieter than A at {100*cvs['A']:.2f}%. "
+      f"{loud} stands alone at {100*cvs[loud]:.2f}%, roughly "
+      f"{cvs[loud]/cvs[quiet]:.0f}× the quietest point, with lower-pressure and "
+      f"higher-pressure neighbours on either side of it. This is a spike at one "
+      f"utilisation, not a trend across the axis.\n")
+    W(f"**Reproducibility and speed are different axes.** Over the same four configs "
+      f"the *mean* `ttft_p95` spans {means[min(order, key=lambda c: means[c])]:.3f} s to "
+      f"{means[max(order, key=lambda c: means[c])]:.1f} s — a factor of "
+      f"{max(means.values())/min(means.values()):.0f}. C is the slowest config measured "
+      f"by a wide margin and also the most repeatable. A config being consistent says "
+      f"nothing about it being good.\n")
+    W("Per the plan, this report states the shape and does not fit a model to four "
+      "points or propose a mechanism.\n")
     W("## 2. All six metrics, all four configs (CV %)\n")
     W("| metric | " + " | ".join(f"C ({UTIL['C']:.2f})" if c == "C" else f"{c} ({UTIL[c]:.2f})" for c in order) + " |")
     W("|---|" + "---|" * len(order))

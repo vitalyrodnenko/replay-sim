@@ -19,6 +19,14 @@ Extends NOISE_PLAN analyses A (dispersion) and C (repeats needed) from two utili
 | **J** | 0.82 | 81,424 | 14 | 0.8176 s | **6.07%** | `████████████` |
 | **A** | 0.85 | 87,200 | 14 | 0.6494 s | **0.69%** | `█` |
 
+### What the curve shows
+
+**It is not monotone.** The two configs under the most pool pressure, C (util 0.60) and K (0.75), are the *quietest* of the four at 0.25% and 0.32% — quieter than A at 0.69%. J stands alone at 6.07%, roughly 25× the quietest point, with lower-pressure and higher-pressure neighbours on either side of it. This is a spike at one utilisation, not a trend across the axis.
+
+**Reproducibility and speed are different axes.** Over the same four configs the *mean* `ttft_p95` spans 0.649 s to 27.7 s — a factor of 43. C is the slowest config measured by a wide margin and also the most repeatable. A config being consistent says nothing about it being good.
+
+Per the plan, this report states the shape and does not fit a model to four points or propose a mechanism.
+
 ## 2. All six metrics, all four configs (CV %)
 
 | metric | C (0.60) | K (0.75) | J (0.82) | A (0.85) |
