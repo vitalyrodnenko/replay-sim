@@ -194,3 +194,30 @@ silently becoming data or eating the night.
 
 **These pool findings are reported in NOISE_REPORT.md as an unplanned observation,
 clearly labelled, and they do not re-score anything.**
+
+## Correction to the amendment above, same night, before any counted repeat finished
+
+The amendment states that "the first boot of a given (mbt, mns) shape is granted
+roughly 5,000 fewer tokens than later boots of that same shape". That reads as an
+established mechanism and it is not one — two points in the published series
+contradict it:
+
+- **D** (util 0.85, mbt 2048, **mns 32**) was the first boot that shape ever had, in
+  run 2, and it came in *high*: 87,840 tokens, +640 above A.
+- **I** (util 0.78, **mbt 8192**, mns 128) was a *repeat* of the mbt=8192 shape,
+  which G had already booted in run 3, and it came in *low*: 68,768 tokens. G and I
+  put the mbt=8192 offset at −4,944 and −4,947 tokens at two different utilisations,
+  agreeing to 3 tokens. An artifact would not reproduce that closely across two
+  utilisations; a genuine activation cost for a 4× larger prefill budget would.
+
+So the honest statement is narrower, and it is the one the changes actually rest on:
+
+> Booting identical settings twice produced 82,656 and 87,680 tokens. **The KV pool
+> is not reproducible across boots**, and the spread is comparable to the 5,776-token
+> gap between configs A and J. The mechanism is unidentified. mbt=8192 additionally
+> appears to carry a real ≈4,944-token cost, measured consistently at two utilisations.
+
+Nothing about the three changes depends on the mechanism: a strict drain, asserting
+the granted pool against the config's published value, and a discarded warm-up are all
+motivated by the reproducibility failure alone. NOISE_REPORT.md will report the
+observation and explicitly say the cause is unresolved.
