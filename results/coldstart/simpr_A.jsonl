@@ -1,0 +1,14 @@
+{"rid": 0, "arrival": 0.121, "ttft": 0.8086, "e2e": 3.9039, "cached_tok": 0, "preempt": 0, "prompt_len": 1920}
+{"rid": 1, "arrival": 1.256, "ttft": 0.915, "e2e": 3.9095, "cached_tok": 1200, "preempt": 0, "prompt_len": 1920}
+{"rid": 2, "arrival": 1.303, "ttft": 0.8833, "e2e": 3.5689, "cached_tok": 1200, "preempt": 0, "prompt_len": 1920}
+{"rid": 3, "arrival": 1.358, "ttft": 0.8283, "e2e": 3.3143, "cached_tok": 1200, "preempt": 0, "prompt_len": 1920}
+{"rid": 4, "arrival": 2.684, "ttft": 0.3326, "e2e": 3.3221, "cached_tok": 1200, "preempt": 0, "prompt_len": 1920}
+{"rid": 5, "arrival": 4.333, "ttft": 0.3393, "e2e": 4.7108, "cached_tok": 1200, "preempt": 0, "prompt_len": 1920}
+{"rid": 6, "arrival": 6.332, "ttft": 0.6222, "e2e": 5.3433, "cached_tok": 1200, "preempt": 0, "prompt_len": 1920}
+{"rid": 7, "arrival": 6.411, "ttft": 0.5578, "e2e": 5.4314, "cached_tok": 1200, "preempt": 0, "prompt_len": 1920}
+{"rid": 8, "arrival": 7.59, "ttft": 0.9205, "e2e": 4.3005, "cached_tok": 1200, "preempt": 0, "prompt_len": 1920}
+{"rid": 9, "arrival": 7.651, "ttft": 0.8761, "e2e": 5.6148, "cached_tok": 1200, "preempt": 0, "prompt_len": 1920}
+{"rid": 10, "arrival": 7.74, "ttft": 0.7871, "e2e": 3.6224, "cached_tok": 1200, "preempt": 0, "prompt_len": 1920}
+{"rid": 11, "arrival": 9.454, "ttft": 0.3322, "e2e": 4.2304, "cached_tok": 1200, "preempt": 0, "prompt_len": 1920}
+{"rid": 12, "arrival": 9.778, "ttft": 0.6295, "e2e": 3.586, "cached_tok": 1200, "preempt": 0, "prompt_len": 1920}
+{"rid": 13, "arrival": 9.818, "ttft": 0.6074, "e2e": 2.2568, "cached_tok": 1200, "preempt": 0, "prompt_len": 1920}
