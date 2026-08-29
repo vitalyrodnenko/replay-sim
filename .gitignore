@@ -1,3 +1,29 @@
+# Virtualenvs
 .venv/
+venv/
+env/
+
+# Python caches / build artifacts
 __pycache__/
-*.pyc
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Model weights and large local artifacts (never commit these)
+*.safetensors
+*.gguf
+*.pt
+*.bin
+*.onnx
+
+# Local tooling / editor
+.env
+.direnv/
+.vscode/
+.idea/
+*.swp
+.DS_Store
