@@ -1,4 +1,6 @@
-# Draft upstream issue — NOT FILED
+# Upstream issue — FILED
+
+**https://github.com/vllm-project/vllm/issues/54383**
 
 Draft only, from a single two-GPU box. Worth reproducing elsewhere before filing.
 
@@ -61,6 +63,29 @@ Boot each new shape once to populate the compile cache and discard that run, the
 
 - **Residual GPU memory.** 10 boots alternating a strict drain (<450 MiB) with vLLM's default (<1500 MiB) gave 87,200 tokens every time. Forcing the issue with SIGKILL and a 1–3 s restart gave 87,200 every time as well; the driver had already reclaimed everything and pre-boot VRAM read 255 MiB in all 14 boots.
 - **Utilisation, batched-token and sequence budgets** are held constant across each pair above.
+
+
+### Reproduction data
+
+All raw data is public:
+
+- **[results/BOOT_MATRIX.md](https://github.com/vitalyrodnenko/replay-sim/blob/main/results/BOOT_MATRIX.md)** — the full write-up: the
+  10-boot drain matrix, the SIGKILL extension, and the novel-shape test that reproduces
+  the effect.
+- **[results/boot_matrix_novel.csv](https://github.com/vitalyrodnenko/replay-sim/blob/main/results/boot_matrix_novel.csv)** and
+  **[boot_matrix_novel2.csv](https://github.com/vitalyrodnenko/replay-sim/blob/main/results/boot_matrix_novel2.csv)** — the two
+  reproducing pairs (shape 1536/48 and 3072/96), pre-boot VRAM and granted pool per boot.
+- **[results/boot_matrix.csv](https://github.com/vitalyrodnenko/replay-sim/blob/main/results/boot_matrix.csv)** — the 10 alternating-drain
+  boots that came back identical, ruling the drain threshold out.
+- **[results/boot_matrix_hostile.csv](https://github.com/vitalyrodnenko/replay-sim/blob/main/results/boot_matrix_hostile.csv)** — SIGKILL
+  plus 1-3 s restart, also identical.
+- Server startup logs for every boot above:
+  [novelshape_1](https://github.com/vitalyrodnenko/replay-sim/blob/main/results/logs/novelshape_1.log),
+  [novelshape_2](https://github.com/vitalyrodnenko/replay-sim/blob/main/results/logs/novelshape_2.log),
+  [novelshape2_1](https://github.com/vitalyrodnenko/replay-sim/blob/main/results/logs/novelshape2_1.log),
+  [novelshape2_2](https://github.com/vitalyrodnenko/replay-sim/blob/main/results/logs/novelshape2_2.log),
+  and `bootmatrix_1..10.log` in the same directory. Each contains the
+  `GPU KV cache size:` line quoted above and the full engine config.
 
 ### Caveats
 
