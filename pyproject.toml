@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "replay-sim"
+version = "0.9.0"
+description = "Trace-driven vLLM replay simulator and validation harness"
+requires-python = ">=3.10"
+
+[tool.setuptools]
+packages = ["replay_sim"]
