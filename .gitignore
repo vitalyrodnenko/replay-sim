@@ -27,3 +27,16 @@ dist/
 .idea/
 *.swp
 .DS_Store
+
+# Caches (HF hub, torch compile, vLLM) -- never commit these
+.cache/
+*.cache
+hf_cache/
+torch_compile_cache/
+
+# Large local artifacts. NOTE: the nvidia-smi dumps and thermal CSVs already
+# under results/logs/ and results/thermal/ ARE committed deliberately -- they are
+# the evidence the reports cite, and the largest is 32 KB. This pattern is for
+# ad-hoc dumps left outside those directories.
+/nvidia_smi_*.csv
+/*.nvsmi

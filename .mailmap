@@ -1,0 +1,6 @@
+# Both identities below are the same person. The early series commits were made
+# under the "replay-sim" name with a personal address; later commits use the
+# GitHub noreply address. History is never rewritten in this repository, so the
+# commit objects keep their original authorship verbatim -- this file only
+# normalises how git log/shortlog display it.
+Vitaly Rodnenko <1169875+vitalyrodnenko@users.noreply.github.com> replay-sim <vitaly.rodnenko@gmail.com>
